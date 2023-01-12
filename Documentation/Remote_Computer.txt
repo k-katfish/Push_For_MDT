@@ -1,0 +1,15 @@
+What are the Remote Computer tools?
+
+Users and Groups - Open lusrmgr.msc for a remote computer. Shortcut for Active Directory Users and Computers -> Find Computer -> Right Click -> Manage -> Wait -> Wait -> Wait -> Click "OK" -> Click "Users and Groups". This button skips all the waiting.
+
+Group Policy:
+ - Edit Group Policy - Opens Group Policy editor for a remote computer. Be sure to Update Group Policy (next line) after editing.
+ - Update Group Policy - Runs gpupdate /force on a remote computer.
+
+Manage Logged on Users - Queries a machine for any currently logged on users, then allows you to log off or shadow any active sessions on that computer.
+
+Manage Computer - Opens Computer Manager (compmgmt.msc) for a remote computer. Shortcut for Active Directory Users and Computers -> Find Computer -> Right Click -> Manage.
+
+Restart Computer - Turns the remote computer off and on again (this doesn't always work).
+
+Shutdown Computer - Turns the remote computer off (this doesn't always work).

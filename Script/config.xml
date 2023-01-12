@@ -1,0 +1,47 @@
+<Configuration>
+  <Dark>
+    <BackColor>255, 29, 31,  33</BackColor>
+    <ForeColor>255, 197, 200, 198</ForeColor>
+    <ToolStripB>255, 40,  42,  46</ToolStripB>
+    <ToolStripH>255, 29,  31,  33</ToolStripH>
+    <Success>Lime</Success>
+    <Warning>Yellow</Warning>
+    <Error>Red</Error>
+  </Dark>
+  <Light>
+    <BackColor>255, 243, 244, 245</BackColor>
+    <ForeColor>255, 86,  94,  101</ForeColor>
+    <ToolStripB>255, 199, 204, 209</ToolStripB>
+    <ToolStripH>255, 86,  94,  101</ToolStripH>
+    <Success>ForestGreen</Success>
+    <Warning>Gold</Warning>
+    <Error>Firebrick</Error>
+  </Light>
+  <Tomorrow>
+    <BackColor>255, 30, 30,  30</BackColor>
+    <ForeColor>255, 167, 167, 167</ForeColor>
+    <ToolStripB>255, 95,  90,  96</ToolStripB>
+    <ToolStripH>255, 30,  30,  30</ToolStripH>
+    <Success>255, 143,  157,  106</Success>
+    <Warning>255, 249,  238,  152</Warning>
+    <Error>255, 207,  106,  76</Error>
+  </Tomorrow>
+  <Classic>
+    <FlatStyle>Flat</FlatStyle>
+    <BorderStyle>FixedSingle</BorderStyle>
+    <FontName>Microsoft Sans Serif Regular</FontName>
+    <FontSize>10</FontSize>
+  </Classic>
+  <Modern>
+    <FlatStyle>Standard</FlatStyle>
+    <BorderStyle>None</BorderStyle>
+    <FontName>Arial</FontName>
+    <FontSize>11</FontSize>
+  </Modern>
+  <Yesterday>
+    <FlatStyle>Flat</FlatStyle>
+    <BorderStyle>FixedSingle</BorderStyle>
+    <FontName>Open Sans</FontName>
+    <FontSize>11</FontSize>
+  </Yesterday>
+</Configuration>

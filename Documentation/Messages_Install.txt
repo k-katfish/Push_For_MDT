@@ -1,0 +1,5 @@
+Some software has some interesting torks about it that can be a real hassle if you don't know about it.
+
+To make a popup appear for a user when they install a particular software, place a README.txt file in the software's folder in P:\Software.
+
+Simply put whatever information you feel is pertinant, and it will appear in a popup box when the user installs that software using PUSH_2.0.

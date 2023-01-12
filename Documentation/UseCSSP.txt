@@ -1,0 +1,131 @@
+What is UseCredSSP?
+
+Too Long; Didn't Read the TL;DR:
+Don't install Solidworks with PUSH on any Non-Labs computer.
+
+TL;DR: 
+To install some software, you _have_ to use CredSSP authentication to pass your username and password to a remote computer. 
+Solidworks is a good example of software which requires CredSSP authentication in order to install.
+CredSSP is safe. As long as your remote computer is safe, your username and password are safe. 
+Labs computers are safe, and any computers that are only administred by ETS are safe.
+Computers where anyone not paid by ETS is an administrator ought to be considered "not safe".
+If a computer is compromised, an attacker can steal your credentials. So we only use CredSSP when we have to.
+
+The full writeup:
+I was working on an installer for Solidworks, and I came across a really weird behavior. If I used RDP to connect to the computer, then launched my SWSilentInstaller, Solidworks installed just fine. But, I couldn't install it with PUSH. I monitored the interaction closely, and saw that PUSH was indeed launching the SWSilentInstaller, but it just died after about 10 minutes. Why? I searched through the logfiles and discovered that Solidworks needs to install Microsoft SQL Server in order to function. "WTF does SQL have to do with Solidworks?" I thought to myself as I banged my head against the desk. After way too much googling, and some pure, unadulterated trial & error, I discovered CredSSP Authentication.
+
+Let's talk about Microsoft Authentication.
+- KERBEROS
+In a domain, Windows computers use an authentication protocol called "Microsoft Kerberos". You can find full details online, but here 
+is the short + sweet summary. A client (this is you, at your workstation 'Client-PC') wants to connect to a resource xyz (thats a resource on
+a server/remote computer you want to access, let's call it 'Server-01'). Both Client-PC and Server-01 are connected to the "example" domain.
+The example.com domain has a domain controller (which is a special kind of server) "EXAMPLEDC". How can you safely send your credentials to the server?
+
+1. Client-PC sends a request to EXAMPLEDC. 
+  "Hello, I'm Client on Client-PC. May I please have a ticket for requesting a ticket?"
+2. EXAMPLEDC sends a response to Client-PC. 
+  "Here is a ticket for requesting tickts: S0ME_3NCRYPT3D_T3XT. This is encrypted with Client's password."
+2.5: Client-PC decrypts S0ME_3NCRYPT3D_T3XT with Client's password, and gets the ticket TGT.
+3. Client-PC sends a new request to EXAMPLEDC. 
+  "Here is my tickt-for-requesting-tickets: TGT. May I please have a ticket to access Server-01?"
+4. EXAMPLEDC sends a new response to Client-PC. 
+  "Here is your ticket to access Server-01: TICKET."
+
+5. Client-PC sends a request to Server-01. 
+  "Hello, here is my ticket for talking to you: TICKET. Can you please talk to me?"
+6. Server-01 sends a response to Client-PC. 
+  "Hello Client-PC. Yes, I will talk to you. I am Server-01, here is the proof: "
+  [Proof, derived from the ticket + something unique to Server-01]
+7. Client-PC sends a request to Server-01.
+  "Great! Please send me resource xyz."
+8. Server-01 sends a response to Client-PC. 
+  "Here is resource xyz: [xyz]"
+
+Security of Kerberos:
+Kerberos is highly secure. 
+First of all, Client's password never gets sent over the network at all. Only Client-PC and EXAMPLEDC know this password, and they can send information back and forth without sending the password as well.
+
+Further, In the interaction between Client-PC and EXAMPLEDC, the client PC can verify that EXAMPLEDC is actually the real EXAMPLEDC because only EXAMPLEDC would have Client's password. Client-PC never sends the password to EXAMPLEDC, but EXAMPLEDC is able to encrypt the ticket-for-requesting-tickets (TGT) with Client's password because EXAMPLEDC already knows it! Client is a domain account, so it's information is stored securely on EXAMPLEDC.
+
+In the interaction between Client-PC and Server-01, no password is exchanged either! Client-PC simply shares with Server-01 that "I'm allowed to talk to you beacuse EXAMPLEDC says so". Server-01 can read the TICKET send over by Client-PC and knows that "Client" is allowed to access resource xzy. Because Server-01 trusts EXAMPLEDC, and it can verify from the ticket that EXAMPLEDC did in fact allow this conversation, Server-01 responds to Client-PC and engages for this session.
+
+
+The Second Hop Problem:
+With Kerberos authentication, Server-01 never actually recieves Client's password. Server-01 only recieves a ticket (issued by the Domain Controller) which says "Yes, Client on Client-PC may access Server-01". If Server-01 were to try and forward this ticket to another server or computer (Let's say, Computer-04), the exchange would look something like this:
+
+1. Server-01 sends the a request to Computer-04.
+  "Hello Computer-04, here is my ticket for talking to you: TICKET. Can you please talk to me?"
+2. Computer-04 sees the ticket, and thinks:
+  Hmm... this ticket says 'Client-PC' may access 'Server-01'. You are not 'Client-PC', and I am not 'Server-01'.
+3. Computer-04 sends a response to Server-01.  
+  "I refuse to talk to you."
+
+This is fantastic for security. Client's password is safe, and client's credentials cannot be used for anything other than connecting to Server-01.
+If Client want's to connect to Computer-04, a new request must be made FROM Client-PC to connect to Computer-04. The reason this request must be made from Client-PC is because Server-01 does not know Client's password. If Server-01 tried to request a ticket to talk to Computer-04 as "Client", that request would fail at step 2.5 (you might also say 3).
+
+1. Server-01 sends a request to EXAMPLEDC.
+  "Hello, I'm Client on Server-01. May I please have a ticket for requesting a ticket?"
+2. EXAMPLEDC sends a response to Server-01.
+  "Yes, here is your ticket for requesting a ticket: S0ME_3NCRYPT3D_T3XT. It is encrypted with Client's password."
+2.5 Server-01 cannot decrypt the ticket, because it does not have Client's password. 
+3. Server-01 cannot send a request for a ticket to EXAMPLEDC. 
+
+Even if Server-01 tries to obtain a ticket, EXAMPLEDC will refuse to provide a ticket without Server-01 having a ticket-for-requesting-tickets, which it cannot obtain because Server-01 does not have the right password.
+
+This is called the "Second Hop Problem". Client can easily and securely make the first hop from Client-PC to Server-01, or a first hop from Client-PC to Computer-04. But, Client cannot make the 'second hop' from Client-PC to Server-01 to Computer-04.
+
+- CREDSSP
+The solution to the Second Hop Problem: CredSSP Authentication.
+With CredSSP is a secure means of authentication with a remote computer, but in this protocal Client's username and password (credentials) are actually shared with the remote server. Here's an example of what this might look like:
+
+1. Client-PC sends a request to Server-01:
+  "Hello, let's set up a secure means of communicating."
+2. Server-01 sends a response to Client-PC:
+  "OK."
+
+Steps 3-5 are unknown, I don't know exactly how this secure communication works, but I'll try and find something and I'll write it up.
+
+6. Client-PC securely sends Client's credentials to Server-01:
+  "Here is the username: Client and the password: clients-password".
+7. Server-01 stores that username and password for the session, and provides service to Client-PC:
+  "OK Client. Here is the service you requested"
+
+The pro of this is: No second hop problem! If Client says to Server-01 'now connect me to Computer-04', Server-01 can easily connect to Computer-04 either using the default Kerberos authentication (or even CredSSP again, forwarding Client's username and password along to Computer-04).
+
+The downside: If Server-01 is compromised, Client's username and password can be stolen. 
+The communication between Client-PC and Server-01 is secure, so even if an attacker listens in on this conversation, they cannot discern Client's credentials. However, if an attacker has priveged access on Server-01, then the attacker can look on Server-01 to see who is logged in, and is able to see Client's password in plain text. For this reason, CredSSP is not used except to connect to Trusted machines. This includes any computer which you know every administrator and trust them all. 
+
+What exactly constitutes a trusted machine?
+Client knows that the administrators of Server-01 are SYSAdmin1 and SYSAdmin2. In a perfect world, Client personally knows both SYSAdmin1 and SYSAdmin2 and trusts them both personally, but in a practical world Client has probably never met SYSAdmin1 or SYSAdmin2, we just say "Client trusts the System Administrators". So, Client can safely use CredSSP authentication to connect to Server-01 and send along a username and password for Server-01 to hold. We can say that Server-01 is a trusted machine.
+
+As a counter example, Client knows the administrators of Computer-04 to be SYSAdmin1 and TempIntern1. Client does not trust TempIntern1 because "Who knows what TempIntern1's motives are? TempIntern1 is only here for a few weeks, and will take off and do something else afterwards." Client does _not_ want TempIntern1 to be able to see Client's password. We would say that Computer-04 is an untrusted (or not a trusted) machine. Client should not use CredSSP authentication to connect to Computer-04, and should only be using Kerberos if necessary.
+
+By default, we typically say that anyone other than a Trusted person or computer is Untrusted.
+
+- Why CredSSP vs Kerberos matters
+Pheweph that was a whole lot more than you probably ever wanted to know about authentication in a Domain! But, it is necessary to understand because it plays a critical role in PUSH for installing some software.
+
+Wrapping it back around to Solidworks, I found that when I ran the Solidworks installer remotely, the very highly specific error was something like this:
+
+   The requested operation cannot be completed. The computer must be trusted for delegation and the current user account must be configured to allow delegation.
+
+(For the full log file, you can find that at S:\ENS\Push_2.0\Documentation\FailedSolidworksInstall.log).
+
+Why couldn't I install Solidworks remotely? Because the remote computer didn't have access to my password. I was encountering the Second Hop Problem, and I wasn't even connecting to a second machine! I'll outline the process, see if you can catch the second hop:
+
+1. Connect to the remote computer.
+2. Launch SWSilentInstaller.exe
+3. SWSilentInstaller runs, eventually installing Microsoft SQL Server 2019.
+4. To configure the SQL server to be ready for Solidworks to install, the Solidworks installer runs a SQL ScenarioEngine to set everything up.
+5. The ScenarioEngine attempts to write a secure string to the server, calling a few system tools which eventually try to write a secure string.
+6. To write a secure string, the system attempts to grab the user's username and password to turn plaintext into secure text.
+7. The process fails, as the system does not have access to the user's password.
+8. SQL fails to install
+9. The Solidworks installer realizes this and terminates
+10. The SWSilentInstaller.exe terminates, and the remote session ends.
+
+Ok, I tried to make it as obvious as possible, but it happens at step 6. In this particualar case, it's because the system is trying to write a securestring, which needs access to the users password in order to be created. However, this could happen for many other reasons. In fact, I'm experimenting with CredSSP authentication with AutoDESK because I think this might be what's causing the installs to fail (though I'm not entirely sure).
+
+While we'll never really know why Solidworks needs to install SQL in order to function, we do know the solution to doing the whole thing remotely: CredSSP Authentication.
+
+Why didn't I use CredSSP for everything though? Because PUSH is designed to be used on any computer, including non-trusted computers. In the case of Solidworks, any computer which is going to have Solidworks installed (for my use case) is going to be a Trusted computer. However, other softwares should still be installable on other untrusted computers. For these softwares which are nice and friendly and don't install SQL for some unknown reason, CredSSP isn't required and we can get away with using the safer Kerberos Authentication to create the remote sessions to install software. I'm not saying CredSSP isn't safe. It is. As long as you trust the computer you're connecting to, you have nothing to worry about. But, if you've added someone else as an administrator on that computer, you might want to be a bit wary about using CredSSP to remotely connect to that computer.

@@ -1,0 +1,3 @@
+Ahh, a console user. Let's see what we have for you...
+
+Push for console is largely undeveloped (as of writing). It's mostly just used for deploying software to a remote computer.

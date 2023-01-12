@@ -1,0 +1,17 @@
+So... you don't actually compile a Powershell Script. However! You can use ps2exe to make a powershell script into an executable application.
+
+Note - you need to have ps2exe installed first. Open powershell as administrator and run the following:
+PS > Install-Module PS2EXE
+(say yes/Y to any prompts)
+
+
+You can then run it manually, or just have the 'compiler' do it for you. To do it automatically just double click Compile.exe in the Push_2.0 directory.
+to run this manually open Powershell and run:
+PS> ps2exe .\"PUSH_2.0.ps1" 
+which will automatically create the executable "PUSH_2.0.exe"
+
+
+https://www.powershellgallery.com/packages/ps2exe/1.0.4
+https://github.com/MScholtes/PS2EXE
+
+The "Compiler" program (its actually just a add the flags -noOutput and -noConsole to hide the console window.

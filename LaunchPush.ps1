@@ -1,0 +1,1 @@
+Start-Process Powershell.exe -ArgumentList "$PSScriptRoot\Script\Push.ps1" -NoNewWindow

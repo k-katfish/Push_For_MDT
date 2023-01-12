@@ -1,0 +1,20 @@
+How do I add a group of computers to PUSH?
+
+PUSH gets its groups from the name of every file in the Groups folder. To add a group to PUSH, create new plaintext file in PUSH_2.0\Groups\.
+
+The name of the file (minus the .txt extention) will appear in the dropdown menu.
+
+In the file, place the names of all of the computers you want in that group, each on a new line.
+
+For example: the file Servers.txt appears in the dropdown menu as "Servers".
+Servers.txt:
+Server-01
+Server-02
+Server-03
+
+PUSH will read that file to grab the names of all of the computers and fill those into the list of computers you can work on.
+
+In the Servers.txt example above, the available servers for PUSH will be Server-01, Server-02, and Server-03.
+
+!Note! 
+You shouldn't need to add the domain to the end of the computer names, PUSH should find them just fine as long as you're running it on a domain computer.

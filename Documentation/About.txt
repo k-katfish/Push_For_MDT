@@ -1,0 +1,7 @@
+About PUSH
+
+PUSH was originally created for Engineering Technology Services at Colodao State University's Walter Scott Jr. College of Engineering by Matthew (circa 2013). After the server that was hosting the original implmentation of PUSH was shut down due to security concerns, Kyle Ketchell reworked PUSH into PUSH 2.0 (Summer 2022)
+
+This new version of PUSH includes several new features, the primary one being that PUSH can be run without the need for a supporting host server. PUSH 2.0 runs entirely on any computer, and everything it does can happen without the need for a supporting server.
+
+The intent with the reworked PUSH is that ETS employees will continue to maintain the script and write silent installers for PUSH. As such, the script is documented as thouroughly as possible, and there are additional resources (internally) for how to work with PUSH.

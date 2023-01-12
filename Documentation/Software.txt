@@ -1,0 +1,56 @@
+How do I add software to be silently installed using PUSH?
+
+Here's an example that should help a bit. 
+Consoto Engineering Software is a special kind of Engineering software that engineers can use to do engineering things. Commonly refered to as CES (pronunced like "sees"), it's a bit tricky to silently install, but I'll walk you through it.
+
+We already have a working installer for CES in the software drive. To manually install CES, we log in, go to S:\ENS\Installs\CES\CES_setup.exe , click through a bunch of prompts, wait a while for CES to install, then click "Finish" and it's done. But doing that manually takes time and is a hassle. So we'd like to have PUSH do it for us.
+
+Lets begin by creating a folder called "CES" in S:\ENS\PUSH_2.0\Software. PUSH will scan this folder, and find the CES folder. It will be populated into the list of available software to install whenever a user runs PUSH.
+
+Now we need to actaully make installers for CES. Google skills come in super handy here! I googled "silent install CES" and found https://CES.com/Install-Help-For-SysAdmins.html . It was super helpful! I'll walk you through what we needed to do.
+
+First, we need to install some prerequisites. The prerequistes are located in the S:\ENS\Installs\CES\prerequisites\ folder. A quick google search reveals that you can install it by running "msiexec /i prereq1.msi /q" and it will install. So lets create a script inside of PUSH's Software\CES folder, and put in that line "msiexec /i prereq1.msi /q". We'll want this to execute first, so we'll save it as 0_prerequisites.ps1
+
+S:\ENS\PUSH_2.0\Software\CES:
+`- 0_prerequisites.ps1
+
+Contents of 0_prerequisites.ps1:
+msiexec /i prereq1.msi /q
+
+Great! Now we just need to create a script to actually install CES on the computer. We'll call this 1_install-CES.ps1, and put in the long and complicated command that CES documentation told us we needed to run.
+
+S:\ENS\PUSH_2.0\Software\CES:
+|- 0_prerequisites.ps1
+`- 1_install-CES.ps1
+
+Contents of 1_install-CES.ps1:
+mkdir C:\TMP_CES_INSTALL
+Copy-Item \\software.engr.colostate.edu\software\ENS\Installs\CES\CES_setup.exe -Destination C:\TMP_CES_INSTALL\
+Copy-Item \\software.engr.colostate.edu\software\ENS\Installs\CES\CES_admin.xml -Destination C:\TMP_CES_INSTALL\
+& "C:\TMP_CES_INSTALL\CES_setup.exe /s /qbnfe /input C:\TMP_CES_INSTALL\CES_admin.xml"
+
+The next thing is to set up the licensing garbage for CES, because licensing is a must and a pain. However, Consoto Engineering provides a super handy .exe for licensing their software, and it runs silently by default! No extra configuration or anything required. So we'll just copy it over to the CES folder in Push's software folder, and rename it so it fits our scheme.
+
+S:\ENS\PUSH_2.0\Software\CES:
+|- 0_prerequisites.ps1
+|- 1_install-CES.ps1
+`- 2_CES_lcmgr.exe 
+
+Great! Everything works as intended. We can now use PUSH to install CES on a remote computer.
+
+Here are a few extra things you might want to know:
+You can include a README file (README.txt, or README.md, or README) in the folder for your software. Suppose you needed to say "Hey! Make sure the CES license server is active!". You could put that in a README file in the S:\ENS\PUSH_2.0\Software\CES folder. Then, when you install that software with PUSH, it will find that file, and popup a messagebox with the contents of the README file in it.
+You can include a UseCredSSP.txt file in the folder. This is just an empty file, but it being present or not tells PUSH whether or not to use CredSSP authentication when installing your software. If it doesn't work with out it, try putting it in.
+
+So here's our final CES folder in PUSH:
+
+S:\ENS\PUSH_2.0\Software\CES:
+|- 0_prerequisites.ps1
+|- 1_install-CES.ps1
+|- 2_CES_lcmgr.exe 
+|- README.txt
+`- UseCredSSP.txt
+
+So what will PUSH do? PUSH will first popup a message with the contents of README in it. Then, after you click OK, it will connect to any specified remote computers, and run 0_prerequisites.ps1, 1_install-CES.ps1, and execute 2_CES_lcmgr.exe. Since the UseCredSSP.txt file is present, it will do all of this using CredSSP authentication.
+
+Pro Tip! If you have a .ps1 file and a matching .exe file (like script.ps1 and script.exe) Push will only run the script.exe file, and it will ignore script.ps1.

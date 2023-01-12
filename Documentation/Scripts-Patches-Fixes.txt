@@ -1,0 +1,7 @@
+How do I use PUSH_2.0 to apply a patch/fix to a computer?
+
+Write a script in powershell, then use ps2exe to make it into an executable file, then put the executable file in a Folder in PUSH_2.0\Software.
+
+For example. Suppose you set a bunch of computers to autologin as an administrator (oops). Write a powershell script that changes the registry to remove that particular setting. Then, run the command "ps2exe .\[your-script].ps1" to turn it into an executable. Then, figure out a name for the fix (Disable-Auto-Admin-Logon) and make that folder PUSH's Software folder. Copy your executable made by ps2exe into that folder. Then, run PUSH_2.0 and select that from the list, and select all of the computers you want to do the fix on, and click "Act on Selected Machines".
+
+Google is your friend (or duckduckgo, ddg.gg if you prefer.) look around on the internet for people who have already tried to do whatever it is you want to do, then copy them. Plagurism doesn't exist in the real world let's be honest.
