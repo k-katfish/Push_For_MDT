@@ -20,8 +20,8 @@
             "name": "Push_Dev",
             "type": "PowerShell",
             "request": "launch",
-            "script": "${relativeFile}",
-            "args": ["-configure", "${workspaceFolder}\\Script\\config-kkatfish-devel.xml"]
+            "script": "${workspaceFolder}\\Script\\Push.ps1",
+            "args": ["-Verbose"]//"-configure", "${workspaceFolder}\\Script\\config-kkatfish-devel.xml"]
         }
     ]
 }

@@ -17,6 +17,17 @@ function Invoke-RefreshColors ($Form) {
   }
 }
 
+function New-WinForm ($Text, $Size, $Icon, $StartPosition) {
+  $Form = New-Object System.Windows.Forms.Form
+  $Form.Text = $Text
+  $Form.ClientSize = New-Object System.Drawing.Size($Size[0], $Size[1])
+  $Form.BackColor = Get-BackgroundColor
+  $Form.ForeColor = Get-ForegroundColor
+  $Form.Icon = $Icon
+  $Form.StartPosition = $StartPosition
+  return $Form
+}
+
 function New-Button ($Text, $Location, $Size) {
   $Button = New-Object System.Windows.Forms.Button
   $Button.Text = $Text
@@ -82,4 +93,54 @@ function New-Checkbox ($Text, $Location, $Size) {
   $Checkbox.ForeColor = Get-ForegroundColor
   $Checkbox.Font = Get-FontSettings
   return $Checkbox
+}
+
+function New-MessageBox ($Text, $Caption, $Buttons = 'OKCancel', $DefaultButton = 0, $Icon = 'Asterisk') {
+  <#  Button types: AbortRetryIgnore , CancelTryContinue , OK , OKCancel , RetryCancel , YesNo , YesNoCancel
+      Default Button: 0 (first), 256 (second), 512 (third), 768 (help) 
+      Icon types: Asterisk/Information, Error/Hand/Stop, Exclamation/Warning, None, Question 
+  #>
+  return [System.Windows.Forms.MessageBox]::Show($Text, $Caption, $Buttons, $Icon, $DefaultButton)
+}
+
+function New-ToastNotification ($Title, $Content, $TitleIcon, $BodyIcon) {
+  <# Icon types: Asterisk/Information, Error/Hand/Stop, Exclamation/Warning, None, Question #>
+  switch ($TitleIcon) {
+    {"Asterisk", "Information"} { $TitleIcon = [System.Drawing.SystemIcons]::Information }
+    {"Error", "Hand", "Stop"} { $TitleIcon = [System.Drawing.SystemIcons]::Error }
+    {"Exclamation", "Warning"} { $TitleIcon = [System.Drawing.SystemIcons]::Warning }
+  }
+
+  if ($BodyIcon) { 
+    switch ($BodyIcon) {
+      {"Asterisk", "Information"} { $BodyIcon = [System.Drawing.SystemIcons]::Information }
+      {"Error", "Hand", "Stop"} { $BodyIcon = [System.Drawing.SystemIcons]::Error }
+      {"Exclamation", "Warning"} { $BodyIcon = [System.Drawing.SystemIcons]::Warning }
+    }
+  } else {
+    $BodyIcon = [System.Windows.Forms.ToolTipIcon]::None
+  }
+
+  $Notify = New-Object System.Windows.Forms.NotifyIcon
+  $Notify.Icon = $TitleIcon
+  $Notify.Visible = $true
+  $Notify.ShowBalloonTip(10, $Title, $Content, $BodyIcon)
+}
+
+function Get-FolderPathLameUI {
+  $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
+  if ($FolderBrowser.ShowDialog() -eq "OK") { return $FolderBrowser.SelectedPath }
+  else { return $null }
+}
+
+function Get-FolderPathUI {
+  # 'tis broken. But I hate the actual folderbrowserdialog, and really want to use the same openfiledialog but to open a folder. i'll come back to this someday.
+  return $null
+  $FolderBrowser = New-Object System.Windows.Forms.OpenFileDialog
+  $FolderBrowser.ValidateNames = $false
+  $FolderBrowser.CheckFileExists = $false
+  $FolderBrowser.CheckPathExists = $true
+  $FolderBrowser.Filter = "Folders|*."
+  $Null = $FolderBrowser.ShowDialog()
+  return $FolderBrowser.SelectedPath
 }
