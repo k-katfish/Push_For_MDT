@@ -1,4 +1,4 @@
-Import-Module Microsoft.PowerShell.Security
+#Import-Module Microsoft.PowerShell.Security
 function Get-StoredPSCredential {
     if (-Not $script:StoredPSCredential) {
         Write-Debug "Get-StoredPSCredential: No credentials provided yet. Requesting credentials."

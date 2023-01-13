@@ -35,13 +35,15 @@ if (Get-Module ConfigManager) { Remove-Module ConfigManager }
 if (Get-Module Install_Software) { Remove-Module Install_Software }
 if (Get-Module GUIManager) { Remove-Module GUIManager }
 if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
-if (Get-Module CredentialManager) {Remove-Module CredentialManager}
+if (Get-Module CredentialManager) { Remove-Module CredentialManager}
+if (Get-Module MDTManager) { Remove-Module MDTManager }
 
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\Install_Software.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
 Import-Module $PSScriptRoot\ToolStripManager.psm1
 Import-Module $PSScriptRoot\CredentialManager.psm1
+Import-Module $PSScriptRoot\MDTManager.psm1
 
 if ($Configuration_File) { Set-ConfigurationFile $Configuration_File }
 if ($Credential) { Set-StoredPSCredential $Credential }
@@ -51,42 +53,6 @@ if ($Credential) { Set-StoredPSCredential $Credential }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 #[System.Windows.Forms.Application]::EnableVisualStyles() # maybe this is a color thing?
-
-
-
-<#
-function GetCreds {
-  param([PSCredential]$Credential)
-  if (-Not $Credential) {
-    $CredMessage = "Please provide valid credentials."
-    $user = "$env:UserDomain\$env:USERNAME"
-    $Credential = Get-Credential -Message $CredMessage -UserName $user
-    if (-Not $Credential) {
-      return -1
-    }
-  }
-
-  try {
-    Start-Process Powershell -ArgumentList "Start-Sleep",0 -Credential $Credential -WorkingDirectory 'C:\Windows\System32' -NoNewWindow
-    Powershell -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy Bypass -Scope CurrentUser"
-  } catch {
-    if ($_ -like "*password*") {
-      Write-Verbose "GetCred: Bad password provided."
-      Start-Process Powershell -ArgumentList "Add-Type -AssemblyName System.Windows.Forms;",
-      "[System.Windows.Forms.MessageBox]::Show('Bad Password! Try again!','Uh-oh.')" -WindowStyle Hidden
-      $Credential = GetCreds
-    } elseif ($_ -like "*is not null or empty*") {
-      Write-Verbose "GetCred: No password provided."
-      $OKC = Start-Process Powershell -ArgumentList "Add-Type -AssemblyName System.Windows.Forms;",
-      "[System.Windows.Forms.MessageBox]::Show('Please enter a password. Click Cancel to cancel the operation.','Whoopsie.',OKCancel)" -WindowStyle Hidden
-      if ($OKC -eq "Cancel") { return -1 }
-      $Credential = GetCreds
-    }
-  }
-
-  log "GetCreds: Returning Credential Object: $($Credential.Username)"
-  return $Credential
-}#>
 
 $GUIForm                    = New-Object System.Windows.Forms.Form
 $GUIForm.ClientSize         = New-Object System.Drawing.Point(900,400)
@@ -110,12 +76,15 @@ $ApplyToManualEntry   = New-Button -Text "Install Now" -Location (625,100) -Size
 $EnterPS              = New-Button -Text "Enter PSSession" -Location (625,125) -Size (256,25)
 $ScanComputer         = New-Button -Text "Scan Computer" -Location (625,150) -Size (256,25)
 
-$RunExecutablesList   = New-ListBox -Size (345, 150) -Location (275,25)
-$SoftwareFilterTextBox= New-TextBox -Size (150,23) -Location (330,174)
-$SoftwareFilterLabel  = New-Label -Text "Search:" -Location (276,177)
-$ShowHiddenCheckbox   = New-Checkbox -Text "Show Hidden" -Location (500,175) -Size (150,23)
+#$TSListFilterLabel       = New-Label -Text "Show: " -Location (275, 25)
+$TaskSequencesListFilter = New-ComboBox -Text "Filter..." -Location (275, 25) -Size (345, 23)
 
-$OutputBox            = New-TextBox -Size (345, 190) -Location (275,200)
+$TaskSequencesList    = New-ListBox -Size (345, 225) -Location (275,50)
+$SoftwareFilterTextBox= New-TextBox -Size (150,23) -Location (330,264)
+$SoftwareFilterLabel  = New-Label -Text "Search:" -Location (276,267)
+$ShowHiddenCheckbox   = New-Checkbox -Text "Show Hidden" -Location (500,265) -Size (150,23)
+
+$OutputBox            = New-TextBox -Size (345, 90) -Location (275,300)
 $DoneLabel            = New-Label -Text "Done" -Location (($OutputBox.Location.X + 2), ($OutputBox.Location.Y + $OutputBox.Height + 130))
 
 $GUIForm.Controls.AddRange(@(
@@ -123,12 +92,13 @@ $GUIForm.Controls.AddRange(@(
   $SelectAll, $SelectNone, $MachineList, $InstallOnSelMachines,
   $ManualSectionHeader, $OrLabel, $ManualNameTextBox,
   $ApplyToManualEntry, $EnterPS, $ScanComputer,
-  $RunExecutablesList, $FixesCheckBox,
+  $TaskSequencesListFilter,
+  $TaskSequencesList, $FixesCheckBox,
   $SoftwareFilterTextBox, $ShowHiddenCheckbox,
   $SoftwareFilterLabel, $OutputBox, $DoneLabel
 ))
 
-$RunExecutablesList.SelectionMode = 'MultiExtended'
+$TaskSequencesList.SelectionMode  = 'MultiExtended'
 $MachineList.SelectionMode        = 'MultiExtended'
 $OutputBox.ReadOnly               = $true
 $OutputBox.MultiLine              = $true
@@ -137,6 +107,14 @@ $OutputBox.WordWrap               = $false
 $OutputBox.ScrollBars             = "Vertical,Horizontal"
 
 $SelectGroup.Items.Add("All Machines") *> $null
+
+$TaskSequencesListFilter.Items.AddRange(@("Everything", "Applications", "Task Sequences"))
+$TaskSequencesListFilter.Add_Click({
+  #if ($TaskSequencesListFilter.SelectedItem.Text -ne "Filter...") { 
+  #  Set-TaskSequenceListItems -Filter $TaskSequencesListFilter.SelectedItem.Text -ShowHidden:$ShowHiddenCheckbox.Checked 
+  #}
+  Set-TaskSequenceListItems
+})
 
 Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
   $GroupName = $_.Name.Substring(0,$_.Name.length-4)
@@ -180,7 +158,7 @@ $InstallOnSelMachines.Add_Click({
     return
   }
   $ListSelectedMachines = $MachineList.SelectedItems
-  $ListSelectedSoftware = $RunExecutablesList.SelectedItems
+  $ListSelectedSoftware = $TaskSequencesList.SelectedItems
   Write-Verbose "Installing $ListSelectedSoftware on $ListSelectedMachines"
   Invoke-Install -Machines $ListSelectedMachines -Installers $ListSelectedSoftware -Credential $CredentialObject -Config $Config
 })
@@ -197,7 +175,7 @@ $ApplyToManualEntry.Add_Click({
     return
   }
   $SelectedComputer = $ManualNameTextBox.text
-  $SelectedSoftware = $RunExecutablesList.SelectedItems
+  $SelectedSoftware = $TaskSequencesList.SelectedItems
   Write-Verbose "Installing $SelectedSoftware on $SelectedComputer"
   Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
 })
@@ -218,23 +196,60 @@ $ScanComputer.Add_Click({
   Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\ScanHost.ps1 -Hostname $($ManualNameTextBox.Text)" -WindowStyle:Hidden
 })
 
-function loadSoftware {
-  $RunExecutablesList.Items.Clear()
-  if ($ShowHiddenCheckbox.Checked) {
-    Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" -Force | ForEach-Object {
-      $RunExecutablesList.Items.Add($_.Name) *> $null
+function Set-TaskSequenceListItems {
+  $TaskSequencesList.Items.Clear()
+
+  #if ($RefreshList) {
+  #  $script:TSItems = Get-MDTTSList
+  #  $script:AppItems = Get-MDTAppsList
+  #}
+
+  switch ($TaskSequencesListFilter.SelectedItem) {
+    "Everything" {
+      Get-MDTAppsList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
+        Write-Verbose "Found Application $_"
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") {
+          $TaskSequencesList.Items.Add($_) *> $null
+        }
+      }
+
+      Get-MDTTSList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
+        Write-Verbose "Found Task Sequence $_"
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") {
+          $TaskSequencesList.Items.Add($_) *> $null
+        }
+      }
     }
-  } else {
-    Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" | ForEach-Object {
-      $RunExecutablesList.Items.Add($_.Name) *> $null
+
+    "Applications" {
+
+    }
+
+    "Task Sequences" {
+
+    }
+  }
+  
+  if ($TaskSequencesListFilter.SelectedItem.Text -eq "Applications") {
+    #if ($ShowHiddenCheckbox.Checked) {
+    #  Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" -Force | ForEach-Object {
+    #    $TaskSequencesList.Items.Add($_.Name) *> $null
+    #  }
+    #} else {
+    #  Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" | ForEach-Object {
+    #    $TaskSequencesList.Items.Add($_.Name) *> $null
+    #  }
+    #}
+    Get-MDTAppsList | ForEach-Object {
+      Write-Verbose "Found Application $_"
+      $TaskSequencesList.Items.Add($_) *> $null
     }
   }
 }
-loadSoftware
 
-$SoftwareFilterTextBox.Add_TextChanged({ loadSoftware })
+$SoftwareFilterTextBox.Add_TextChanged({ Set-TaskSequenceListItems })
 
-$ShowHiddenCheckbox.Add_Click({ loadSoftware })
+$ShowHiddenCheckbox.Add_Click({ Set-TaskSequenceListItems })
 
 $DoneLabel.Text      = "Not done yet"
 $DoneLabel.Forecolor = Get-SuccessColor
@@ -252,7 +267,8 @@ $TSFUser = Get-NewTSItem "Launch Session Manager"
 $TSFUser.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1" <#-NoNewWindow#> -WindowStyle:Hidden })
 $TSFMDTShare = Get-NewTSItem "Connect to MDT Share"
 $TSFMDTShare.Add_Click({
-  #do - the - mdt - share - things...
+  Connect-DeploymentShare
+  Set-TaskSequenceListItems
 })
 $TSFExitItem = Get-NewTSItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
