@@ -18,15 +18,35 @@ function Get-HardwareInfo {
   .DESCRIPTION
     Send this a hostname to scan, it will return a PS object as described in OUTPUTS
   .PARAMETER Hostname
-    The name of a computer to scan
+    Optional, The name of a computer to scan. --If neither Hostname or CimSession are provided, then data will be returned about localhost.
+  .PARAMETER CimSession
+    Optional, a CimSession to connect to. --If neither Hostname or CimSession are provided, then data will be returned about localhost.
   .OUTPUTS
     A PSObject {Name, DNSName, OnDOmain, Domain, Workgroup, Manufacturer, Model, Serial, RAM}
   .EXAMPLE
     Get-HardwareInfo Server-01
+  .EXAMPLE
+    Get-HardwareInfo $MyCimSession
   #>
-  param([String]$Hostname)
-  $Enclosure = Get-CimInstance Win32_SystemEnclosure -ComputerName $Hostname
-  $System    = Get-CimInstance Win32_ComputerSystem -ComputerName $Hostname
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
+
+  $Enclosure = ""
+  $System = ""
+  $CSProduct = ""
+
+  if ($Hostname) {
+    $Enclosure = Get-CimInstance Win32_SystemEnclosure -ComputerName $Hostname
+    $System    = Get-CimInstance Win32_ComputerSystem -ComputerName $Hostname
+    $CSProduct = Get-CimInstance Win32_ComputerSystemProduct -ComputerName $Hostname
+  } elseif ($CimSession) {
+    $Enclosure = Get-CimInstance Win32_SystemEnclosure -CimSession $CimSession
+    $System    = Get-CimInstance Win32_ComputerSystem -CimSession $CimSession
+    $CSProduct = Get-CimInstance Win32_ComputerSystemProduct -CimSession $CimSession
+  }
+
   $Hardware  = @{
     Name          = $System.Name
     DNSName       = $System.DNSHostName
@@ -36,6 +56,7 @@ function Get-HardwareInfo {
     Manufacturer  = $System.Manufacturer
     Model         = $System.Model
     Serial        = $Enclosure.SerialNumber
+    UUID          = $CSProduct.UUID
     RAM           = [String]([Math]::Round($System.TotalPhysicalMemory / (1024 * 1024 * 1024))) + " GB"
   }
   $HardwareInformation = New-Object PSObject -Property $Hardware
@@ -55,8 +76,21 @@ function Get-ProcessorInfo {
   .EXAMPLE
     Get-HardwareInfo Server-01
   #>
-  param ([String]$Hostname)
-  $Processor = Get-CimInstance Win32_Processor -ComputerName $Hostname
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
+
+  $Processor = ""
+
+  if ($Hostname) {
+    $Processor = Get-CimInstance Win32_Processor -ComputerName $Hostname
+  } elseif ($CimSession) {
+    $Processor = Get-CimInstance Win32_Processor -CimSession $CimSession
+  }
+
+#  param ([String]$Hostname)
+#  $Processor = Get-CimInstance Win32_Processor -ComputerName $Hostname
   $NameString = $Processor.Name
   $SpeedString = $Processor.MaxClockSpeed
   if ($Processor.Name -like "Intel*") {
@@ -64,7 +98,7 @@ function Get-ProcessorInfo {
     $SpeedString = $Processor.Name.Substring($Processor.Name.IndexOf('@')+2)
   } else {
     $NameString = $Processor.Name
-    $SpeedString = [String]([Math]::Round($Processor.MaxClockSpeed/1000, 1)) + "GHz"
+    $SpeedString = [String]([Math]::Round($Processor.MaxClockSpeed/1000, 1)) + " GHz"
   }
   $Info = @{
     Name              = $NameString
@@ -74,9 +108,9 @@ function Get-ProcessorInfo {
   }
   $ProcessorInformation = New-Object PSObject -Property $Info
 
-  Add-Member -InputObject $ProcessorInformation -MemberType "ScriptMethod" -Name "ToString" -Value {
-    return "$($this.Name)`r`n$($this.Speed)`r`n$($this.Cores) Cores`r`n$($this.LogicalProcessors) Logical Processors`r`n"
-  }
+  #Add-Member -InputObject $ProcessorInformation -MemberType "ScriptMethod" -Name "ToString" -Value {
+  #  return "$($this.Name)`r`n$($this.Speed)`r`n$($this.Cores) Cores`r`n$($this.LogicalProcessors) Logical Processors`r`n"
+  #}
 
   return $ProcessorInformation
 }
@@ -352,3 +386,9 @@ function Get-NetworkInfo {
 #Export-ModuleMember -Function Get-ProcessorInfo -Alias Get-ProcessorInformation
 #Export-ModuleMember -Function Get-SoftwareInfo -Alias Get-SoftwareInformation
 #Export-ModuleMember -Function Get-InstalledSoftware -Alias Get-InstalledSoftwareInformation
+
+
+#=============================
+# Works Cited:
+# I took some inspiration from: https://mikefrobbins.com/2014/08/28/powershell-function-to-create-cimsessions-to-remote-computers-with-fallback-to-dcom/
+#=============================
