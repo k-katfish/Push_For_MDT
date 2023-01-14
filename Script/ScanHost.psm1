@@ -128,9 +128,22 @@ function Get-SoftwareInfo {
   .EXAMPLE
     Get-HardwareInfo Server-01
   #>
-  param([String]$Hostname)
-  $OS = Get-CimInstance Win32_OperatingSystem -ComputerName $Hostname
-  $CS = Get-CimInstance Win32_ComputerSystem -ComputerName $Hostname
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
+
+  $OS = ""
+  $CS = ""
+
+  if ($Hostname) {
+    $OS = Get-CimInstance Win32_OperatingSystem -ComputerName $Hostname
+    $CS = Get-CimInstance Win32_ComputerSystem -ComputerName $Hostname
+  } elseif ($CimSession) {
+    $OS = Get-CimInstance Win32_OperatingSystem -CimSession $CimSession
+    $CS = Get-CimInstance Win32_ComputerSystem -CimSession $CimSession
+  }
+
   $Software = @{
     Caption       = $OS.Caption
     Version       = $OS.Version
@@ -158,9 +171,84 @@ function Get-DiskInfo {
   .EXAMPLE
     Get-HardwareInfo Server-01
   #>
-  param ( [String]$Hostname )
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
 
-  $LocalDisks = Get-WmiObject Win32_DiskDrive -ComputerName $Hostname | ForEach-Object {
+  if ($Hostname) {
+    $DiskInformation = Get-CimInstance Win32_DiskDrive -ComputerName $Hostname | ForEach-Object {
+      #$PhysicalMedia = Get-CimAssociatedInstance $_ -ResultClassName Win32_PhysicalMedia
+      #$DiskInfo = Get-CimAssociatedInstance $_ -ComputerName $Hostname
+      $PartitionInformation = Get-CimAssociatedInstance $_ -ResultClassName Win32_DiskPartition -ComputerName $Hostname
+      $LogicalDisks = $PartitionInformation | ForEach-Object { Get-CimAssociatedInstance $_ -ResultClassName Win32_LogicalDisk -ComputerName $Hostname }
+      $LogicalDiskPartitionInformation = Get-CimAssociatedInstance $LogicalDisks -ResultClassName Win32_DiskPartition -ComputerName $Hostname
+      [PSCustomObject]@{
+        DeviceLetter  = $LogicalDisks.DeviceID
+        #Name          = $_.Caption
+        DeviceName    = $_.Caption
+        Partitions    = $_.Partitions
+        #Description   = $DiskInfo.Description
+        TotalDiskSize = [String]([Math]::Floor([double]$_.Size / (1024 * 1024 * 1024))) + " GB"
+        PartitionSize = [String]([Math]::Round([double]$LogicalDiskPartitionInformation.Size / (1024 * 1024 * 1024))) + " GB"
+        FreeSpace     = [String]([Math]::Floor([double]$LogicalDisks.FreeSpace / (1024 * 1024 * 1024))) + " GB"
+        UsedSpace     = [String]([Math]::Floor([double]$LogicalDisks.Size / (1024 * 1024 * 1024) - [double]$LogicalDisks.FreeSpace / (1024 * 1024 * 1024))) + " GB"
+        FileSystem    = $LogicalDisks.FileSystem
+        VolumeName    = $LogicalDisks.VolumeName
+        VolumeSerial  = $LogicalDisks.VolumeSerialNumber
+        DiskName      = $_.Name
+        DiskModel     = $_.Model
+        DiskSerial    = $_.SerialNumber
+      #MediaType     = $LocalDiskInformation.MediaType
+      }
+    }
+
+    return $DiskInformation
+
+  } elseif ($CimSession) {
+    $DiskInformation = Get-CimInstance Win32_DiskDrive -CimSession $CimSession | ForEach-Object {
+      #$PhysicalMedia = Get-CimAssociatedInstance $_ -ResultClassName Win32_PhysicalMedia
+      #$DiskInfo = Get-CimAssociatedInstance $_ -ComputerName $Hostname
+      $PartitionInformation = Get-CimAssociatedInstance $_ -ResultClassName Win32_DiskPartition -CimSession $CimSession
+      $LogicalDisks = $PartitionInformation | ForEach-Object { Get-CimAssociatedInstance $_ -ResultClassName Win32_LogicalDisk -CimSession $CimSession }
+      $LogicalDiskPartitionInformation = Get-CimAssociatedInstance $LogicalDisks -ResultClassName Win32_DiskPartition -CimSession $CimSession
+      [PSCustomObject]@{
+        DeviceLetter  = $LogicalDisks.DeviceID
+        #Name          = $_.Caption
+        DeviceName    = $_.Caption
+        Partitions    = $_.Partitions
+        #Description   = $DiskInfo.Description
+        TotalDiskSize = [String]([Math]::Floor([double]$_.Size / (1024 * 1024 * 1024))) + " GB"
+        PartitionSize = [String]([Math]::Round([double]$LogicalDiskPartitionInformation.Size / (1024 * 1024 * 1024))) + " GB"
+        FreeSpace     = [String]([Math]::Floor([double]$LogicalDisks.FreeSpace / (1024 * 1024 * 1024))) + " GB"
+        UsedSpace     = [String]([Math]::Floor([double]$LogicalDisks.Size / (1024 * 1024 * 1024) - [double]$LogicalDisks.FreeSpace / (1024 * 1024 * 1024))) + " GB"
+        FileSystem    = $LogicalDisks.FileSystem
+        VolumeName    = $LogicalDisks.VolumeName
+        VolumeSerial  = $LogicalDisks.VolumeSerialNumber
+        DiskName      = $_.Name
+        DiskModel     = $_.Model
+        DiskSerial    = $_.SerialNumber
+      #MediaType     = $LocalDiskInformation.MediaType
+      }
+    }
+
+    return $DiskInformation
+  }
+
+#  $OS = ""
+#  $CS = ""
+#
+#  if ($Hostname) {
+#    $OS = Get-CimInstance Win32_OperatingSystem -ComputerName $Hostname
+#    $CS = Get-CimInstance Win32_ComputerSystem -ComputerName $Hostname
+#  } elseif ($CimSession) {
+#    $OS = Get-CimInstance Win32_OperatingSystem -CimSession $CimSession
+#    $CS = Get-CimInstance Win32_ComputerSystem -CimSession $CimSession
+#  }
+
+  #This is going to be harder than the others...
+
+<#  $LocalDisks = Get-WmiObject Win32_DiskDrive -ComputerName $Hostname | ForEach-Object {
     $disk = $_
     $partitions = "ASSOCIATORS OF " +
                   "{Win32_DiskDrive.DeviceID='$($disk.DeviceID)'} " +
@@ -221,7 +309,7 @@ function Get-DiskInfo {
     $DiskObject =  New-Object psobject -Property $Information 
     $DiskInformation.Add($DiskObject)
   }
-  return $DiskInformation
+  return $DiskInformation#>
 }
 
 function Get-InstalledSoftware { # Requires Admin to run!
@@ -344,41 +432,89 @@ function Get-NetworkInfo {
   .EXAMPLE
     Get-HardwareInfo Server-01
   #>
-  param ( [String]$Hostname )
-  $NetworkAdapterConfiguration  = Get-CimInstance Win32_NetworkAdapterConfiguration -ComputerName $Hostname | Where-Object { $_.IPAddress } # get network adapters which actually have an IP
-  $NetworkAdapter = Get-CimAssociatedInstance $NetworkAdapterConfiguration -ComputerName $Hostname
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
 
-  $NetworkInformation = New-Object -Type PSCustomObject -Property @{
-    Name = $NetworkAdapterConfiguration.Description
-    DHCPEnabled = $NetworkAdapterConfiguration.DHCPEnabled
-    DHCPLeaseExpires = $NetworkAdapterConfiguration.DHCPLeaseExpires
-    DHCPLeaseObtained = $NetworkAdapterConfiguration.DHCPLeaseObtained
-    DHCPServer = $NetworkAdapterConfiguration.DHCPServer
-    DNSDomain = $NetworkAdapterConfiguration.DNSDomain
-    DNSDomainSuffixSearchOrder = $NetworkAdapterConfiguration.DNSDomainSuffixSearchOrder
-    DNSHostName = $NetworkAdapterConfiguration.DNSHostName
-    FullDNSRegistrationEnabled = $NetworkAdapterConfiguration.FullDNSRegistrationEnabled
-    IPAddress = $NetworkAdapterConfiguration.IPAddress
-    IPEnabled = $NetworkAdapterConfiguration.IPEnabled
-    DefaultIPGateway = $NetworkAdapterConfiguration.DefaultIPGateway
-    IPSubnet = $NetworkAdapterConfiguration.IPSubnet
-    MACAddress = $NetworkAdapterConfiguration.MACAddress
-    ServiceName = $NetworkAdapterConfiguration.ServiceName
-    Speed = [String](($NetworkAdapter.Speed / (1000 * 1000 * 1000))) + " GB"
-    AdapterType = $NetworkAdapter.AdapterType
-    UID = $NetworkAdapter.GUID
-    Manufacturer = $NetworkAdapter.Manufacturer
-    NetConnectionID = $NetworkAdapter.NetConnectionID
-    NetEnabled = $NetworkAdapter.NetEnabled
-    ProductName = $NetworkAdapter.ProductName
-    TimeOfLastReset = $NetworkAdapter.TimeOfLastReset
+  $NetworkAdapterConfiguration = ""
+  $NetworkAdapter = ""
+
+  if ($Hostname) {
+    #$NetworkAdapterConfiguration = Get-CimInstance Win32_NetworkAdapterConfiguration -ComputerName $Hostname | Where-Object { $_.IPAddress } # get network adapters which actually have an IP
+    #$NetworkAdapter = New-Object System.Collections.ArrayList
+    #$NetworkAdapterConfiguration | ForEach-Object {
+    #  $NetworkAdapter.Add((Get-CimAssociatedInstance $_ -ComputerName $Hostname))
+    #}
+
+    $NetworkAdapterConfiguration = Get-CimInstance Win32_NetworkAdapterConfiguration -ComputerName $Hostname | Where-Object { $_.IPAddress }
+    $NetworkInformation = $NetworkAdapterConfiguration | ForEach-Object {
+      $NetworkAdapter = Get-CimAssociatedInstance $_ -ComputerName $Hostname
+      [PSCustomObject]@{
+        Name = $($_.Description)
+        DHCPEnabled = $_.DHCPEnabled
+        DHCPLeaseExpires = $_.DHCPLeaseExpires
+        DHCPLeaseObtained = $_.DHCPLeaseObtained
+        DHCPServer = $_.DHCPServer
+        DNSDomain = $_.DNSDomain
+        DNSDomainSuffixSearchOrder = $_.DNSDomainSuffixSearchOrder
+        DNSHostName = $_.DNSHostName
+        FullDNSRegistrationEnabled = $_.FullDNSRegistrationEnabled
+        IPAddress = $_.IPAddress
+        IPEnabled = $_.IPEnabled
+        DefaultIPGateway = $_.DefaultIPGateway
+        IPSubnet = $_.IPSubnet
+        MACAddress = $_.MACAddress
+        ServiceName = $_.ServiceName
+        Speed = [String](($NetworkAdapter.Speed / (1000 * 1000 * 1000))) + " GB"
+        AdapterType = $NetworkAdapter.AdapterType
+        UID = $NetworkAdapter.GUID
+        Manufacturer = $NetworkAdapter.Manufacturer
+        NetConnectionID = $NetworkAdapter.NetConnectionID
+        NetEnabled = $NetworkAdapter.NetEnabled
+        ProductName = $NetworkAdapter.ProductName
+        TimeOfLastReset = $NetworkAdapter.TimeOfLastReset
+      }
+    }
+    return $NetworkInformation
+
+  } elseif ($CimSession) {
+    $NetworkAdapterConfiguration = Get-CimInstance Win32_NetworkAdapterConfiguration -CimSession $CimSession | Where-Object { $_.IPAddress } # get network adapters which actually have an IP
+    #$NetworkAdapter = Get-CimAssociatedInstance $NetworkAdapterConfiguration.Get(0) -CimSession $CimSession
+    #$NetworkAdapter = New-Object System.Collections.ArrayList
+    #$NetworkAdapterConfiguration | ForEach-Object {
+    #  $NetworkAdapter.Add((Get-CimAssociatedInstance $_ -CimSession $CimSession))
+    #}
+    $NetworkInformation = $NetworkAdapterConfiguration | ForEach-Object {
+      $NetworkAdapter = Get-CimAssociatedInstance $_ -CimSession $CimSession
+      [PSCustomObject]@{
+        Name = $($_.Description)
+        DHCPEnabled = $_.DHCPEnabled
+        DHCPLeaseExpires = $_.DHCPLeaseExpires
+        DHCPLeaseObtained = $_.DHCPLeaseObtained
+        DHCPServer = $_.DHCPServer
+        DNSDomain = $_.DNSDomain
+        DNSDomainSuffixSearchOrder = $_.DNSDomainSuffixSearchOrder
+        DNSHostName = $_.DNSHostName
+        FullDNSRegistrationEnabled = $_.FullDNSRegistrationEnabled
+        IPAddress = $_.IPAddress
+        IPEnabled = $_.IPEnabled
+        DefaultIPGateway = $_.DefaultIPGateway
+        IPSubnet = $_.IPSubnet
+        MACAddress = $_.MACAddress
+        ServiceName = $_.ServiceName
+        Speed = [String](($NetworkAdapter.Speed / (1000 * 1000 * 1000))) + " GB"
+        AdapterType = $NetworkAdapter.AdapterType
+        UID = $NetworkAdapter.GUID
+        Manufacturer = $NetworkAdapter.Manufacturer
+        NetConnectionID = $NetworkAdapter.NetConnectionID
+        NetEnabled = $NetworkAdapter.NetEnabled
+        ProductName = $NetworkAdapter.ProductName
+        TimeOfLastReset = $NetworkAdapter.TimeOfLastReset
+      }
+    }
+    return $NetworkInformation
   }
-
-  Add-Member -InputObject $NetworkInformation -MemberType "ScriptMethod" -Name "ToString" -Value {
-    return "$($this.Name )"
-  }
-
-  return $NetworkInformation
 }
 
 
