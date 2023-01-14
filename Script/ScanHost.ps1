@@ -30,15 +30,18 @@ Import-Module $PSScriptRoot\ScanHost.psm1
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
 
-if (-not (Test-Connection $Hostname -quiet)) {[System.Windows.Forms.MessageBox]::Show("Computer offline", "Offline"); exit}
-try {
-  Invoke-WmiMethod -ComputerName $Hostname -Class Win32_Process 'Create' "powershell.exe /c Enable-PSRemoting -SkipNetworkProfileCheck -Force"
-  Start-Sleep 1
-  Get-CimInstance -ComputerName $Hostname -ClassName Win32_ComputerSystem
-} catch {
-  [System.Windows.Forms.MessageBox]::Show("Computer appears to be online, but we're unable to scan it.")
-  exit
-}
+#if (-not (Test-Connection $Hostname -quiet)) {[System.Windows.Forms.MessageBox]::Show("Computer offline", "Offline"); exit}
+#try {
+#  Invoke-WmiMethod -ComputerName $Hostname -Class Win32_Process 'Create' "powershell.exe /c Enable-PSRemoting -SkipNetworkProfileCheck -Force"
+#  Start-Sleep 1
+#  Get-CimInstance -ComputerName $Hostname -ClassName Win32_ComputerSystem
+#} catch {
+#  [System.Windows.Forms.MessageBox]::Show("Computer appears to be online, but we're unable to scan it.")
+#  exit
+#}
+
+#$CimSessionOption = New-CimSessionOption -Protocol DCOM
+$CimSession = New-CimSession -ComputerName $Hostname -SessionOption (New-CimSessionOption -Protocol DCOM) #$CimSessionOption
 
 
 $Form                       = New-Object System.Windows.Forms.Form
@@ -64,7 +67,7 @@ $HardwareInfoBox = New-TextBox -Size (300,210) -Location (315,33)
 $HardwareInfoBox.ReadOnly   = $true
 $HardwareInfoBox.Multiline  = $true
 #$HardwareInfoBox.ScrollBars = 'Vertical'
-$HW = Get-HardwareInfo $Hostname
+$HW = Get-HardwareInfo -CimSession $CimSession
 $HardwareInfoBox.Text       = ""
 $HardwareInfoBox.AppendText("$($HW.Name)`r`n")
 if ($HW.Name -ne $HW.DNSName) { $HardwareInfoBox.AppendText("Second Name: $($HW.DNSName)`r`n") }
@@ -73,6 +76,7 @@ else { $HardwareInfoBox.AppendText("Workgroup: $($HW.Workgroup)`r`n") }
 $HardwareInfoBox.AppendText("Make: $($HW.Manufacturer)`r`n")
 $HardwareInfoBox.AppendText("Model: $($HW.Model)`r`n")
 $HardwareInfoBox.AppendText("Serial: $($HW.Serial)`r`n")
+$HardwareInfoBox.AppendText("UUID: $($HW.UUID)`r`n")
 $HardwareInfoBox.AppendText("Installed RAM: $($HW.RAM)`r`n")
 
 
