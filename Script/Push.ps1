@@ -109,12 +109,7 @@ $OutputBox.ScrollBars             = "Vertical,Horizontal"
 $SelectGroup.Items.Add("All Machines") *> $null
 
 $TaskSequencesListFilter.Items.AddRange(@("Everything", "Applications", "Task Sequences"))
-$TaskSequencesListFilter.Add_Click({
-  #if ($TaskSequencesListFilter.SelectedItem.Text -ne "Filter...") { 
-  #  Set-TaskSequenceListItems -Filter $TaskSequencesListFilter.SelectedItem.Text -ShowHidden:$ShowHiddenCheckbox.Checked 
-  #}
-  Set-TaskSequenceListItems
-})
+$TaskSequencesListFilter.Add_SelectedIndexChanged({ Set-TaskSequenceListItems })
 
 Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
   $GroupName = $_.Name.Substring(0,$_.Name.length-4)
@@ -199,55 +194,36 @@ $ScanComputer.Add_Click({
 function Set-TaskSequenceListItems {
   $TaskSequencesList.Items.Clear()
 
-  #if ($RefreshList) {
-  #  $script:TSItems = Get-MDTTSList
-  #  $script:AppItems = Get-MDTAppsList
-  #}
-
   switch ($TaskSequencesListFilter.SelectedItem) {
     "Everything" {
       Get-MDTAppsList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
         Write-Verbose "Found Application $_"
-        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") {
-          $TaskSequencesList.Items.Add($_) *> $null
-        }
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") { $TaskSequencesList.Items.Add($_) *> $null }
       }
-
       Get-MDTTSList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
         Write-Verbose "Found Task Sequence $_"
-        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") {
-          $TaskSequencesList.Items.Add($_) *> $null
-        }
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") { $TaskSequencesList.Items.Add($_) *> $null }
       }
     }
 
     "Applications" {
-
+      Get-MDTAppsList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
+        Write-Verbose "Found Application $_"
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") { $TaskSequencesList.Items.Add($_) *> $null }
+      }
     }
 
     "Task Sequences" {
-
-    }
-  }
-  
-  if ($TaskSequencesListFilter.SelectedItem.Text -eq "Applications") {
-    #if ($ShowHiddenCheckbox.Checked) {
-    #  Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" -Force | ForEach-Object {
-    #    $TaskSequencesList.Items.Add($_.Name) *> $null
-    #  }
-    #} else {
-    #  Get-ChildItem -Path (Get-SoftwareFolderLocation) -filter "*$($SoftwareFilterTextBox.Text)*" | ForEach-Object {
-    #    $TaskSequencesList.Items.Add($_.Name) *> $null
-    #  }
-    #}
-    Get-MDTAppsList | ForEach-Object {
-      Write-Verbose "Found Application $_"
-      $TaskSequencesList.Items.Add($_) *> $null
+      Get-MDTTSList -IncludeHidden:$ShowHiddenCheckbox.Checked | ForEach-Object {
+        Write-Verbose "Found Task Sequence $_"
+        if ($_ -like "*$($SoftwareFilterTextBox.Text)*") { $TaskSequencesList.Items.Add($_) *> $null }
+      }
     }
   }
 }
 
 $SoftwareFilterTextBox.Add_TextChanged({ Set-TaskSequenceListItems })
+#$SoftwareFilterTextBox.Add_Click({ Set-TaskSequenceListItems })
 
 $ShowHiddenCheckbox.Add_Click({ Set-TaskSequenceListItems })
 
