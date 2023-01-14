@@ -17,10 +17,11 @@ function Invoke-RefreshColors ($Form) {
   }
 }
 
-function New-WinForm ($Text, $Size, $Icon, $StartPosition) {
+function New-WinForm ($Text, $Size, $Icon, $StartPosition = 'CenterScreen', $AutoSize) {
   $Form = New-Object System.Windows.Forms.Form
   $Form.Text = $Text
-  $Form.ClientSize = New-Object System.Drawing.Size($Size[0], $Size[1])
+  if ($Size) { $Form.ClientSize = New-Object System.Drawing.Size($Size[0], $Size[1]) }
+  if ($AutoSize) { $Form.AutoSize = $true }
   $Form.BackColor = Get-BackgroundColor
   $Form.ForeColor = Get-ForegroundColor
   $Form.Icon = $Icon

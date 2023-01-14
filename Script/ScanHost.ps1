@@ -23,11 +23,11 @@ param(
 
 Add-Type -AssemblyName System.Windows.Forms
 
-if (Get-Module ConfigManager) {Remove-Module ConfigManager}
+#if (Get-Module ConfigManager) {Remove-Module ConfigManager}
 if (Get-Module ScanHost) { Remove-Module ScanHost }
 if (Get-Module GUIManager) {Remove-Module GUIManager}
 Import-Module $PSScriptRoot\ScanHost.psm1
-Import-Module $PSScriptRoot\ConfigManager.psm1
+#Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
 
 #if (-not (Test-Connection $Hostname -quiet)) {[System.Windows.Forms.MessageBox]::Show("Computer offline", "Offline"); exit}
@@ -39,20 +39,22 @@ Import-Module $PSScriptRoot\GUIManager.psm1
 #  [System.Windows.Forms.MessageBox]::Show("Computer appears to be online, but we're unable to scan it.")
 #  exit
 #}
-
+if (-not (Test-Connection $Hostname -quiet)) {[System.Windows.Forms.MessageBox]::Show("Computer offline", "Offline"); exit}
 #$CimSessionOption = New-CimSessionOption -Protocol DCOM
 $CimSession = New-CimSession -ComputerName $Hostname -SessionOption (New-CimSessionOption -Protocol DCOM) #$CimSessionOption
 
+$Form = New-WinForm -Text "Scan results: $Hostname" -Icon $PSScriptRoot\..\Media\Icon.ico -AutoSize $true
 
-$Form                       = New-Object System.Windows.Forms.Form
-$Form.AutoSize              = $true
-$Form.Text                  = "Scan results: $Hostname"
-$Form.BackColor             = Get-BackgroundColor
+#$Form                       = New-Object System.Windows.Forms.Form
+#$Form.AutoSize              = $true
+#$Form.Text                  = "Scan results: $Hostname"
+#$Form.BackColor             = Get-BackgroundColor
 #$Form.Icon = $Config.Design.Scan_Host_Icon
 
+Write-Verbose "Gathering CPU Information..."
 $ProcessorLabel = New-Label -Text "Processor" -Location (10, 10)
 $ProcessorInfoBox = New-TextBox -Text "" -Location (10,33) -Size (300,210)
-$PI = Get-ProcessorInfo $Hostname
+$PI = Get-ProcessorInfo -CimSession $CimSession
 $ProcessorInfoBox.Text      = "" 
 $ProcessorInfoBox.AppendText("$($PI.Name)`r`n")
 $ProcessorInfoBox.AppendText("$($PI.Speed)`r`n")
@@ -61,7 +63,7 @@ $ProcessorInfoBox.AppendText("$($PI.LogicalProcessors) Logical Processors`r`n")
 $ProcessorInfoBox.ReadOnly = $true
 $ProcessorInfoBox.Multiline = $true
 
-
+Write-Verbose "Gathering Hardware Information..."
 $HardwareLabel = New-Label -Text "Hardware" -Size (100, 23) -Location (315, 10)
 $HardwareInfoBox = New-TextBox -Size (300,210) -Location (315,33)
 $HardwareInfoBox.ReadOnly   = $true
@@ -79,13 +81,13 @@ $HardwareInfoBox.AppendText("Serial: $($HW.Serial)`r`n")
 $HardwareInfoBox.AppendText("UUID: $($HW.UUID)`r`n")
 $HardwareInfoBox.AppendText("Installed RAM: $($HW.RAM)`r`n")
 
-
+Write-Verbose "Gathering OS Information..."
 $SoftwareLabel = New-Label -Text "Operating System" Size (130,23) -Location (620, 10)
 $SoftwareInfoBox = New-TextBox -Size (300,210) -Location (620,33)
 $SoftwareInfoBox.ReadOnly   = $true
 $SoftwareInfoBox.Multiline  = $true
 #$SoftwareInfoBox.ScrollBars = 'Vertical'
-$SI = Get-SoftwareInfo $Hostname
+$SI = Get-SoftwareInfo -CimSession $CimSession
 $SoftwareInfoBox.Text = ""
 $SoftwareInfoBox.AppendText("$($SI.Caption)`r`n")
 $SoftwareInfoBox.AppendText("$($SI.Version)`r`n")
@@ -109,54 +111,69 @@ $SoftwareInfoBox.AppendText("Registered to: $($SI.RUser), $($SI.ROrganization)`r
 $SoftwareInfoBox.AppendText("$($SI.Users)`r`n")
 
 
-
+Write-Verbose "Gathering Disk Information..."
 $DiskLabel = New-Label -Text "Disks" -Location (925, 10)
 $DiskInfoBox = New-TextBox -Size (300, 210) -Location (925, 33)
 $DiskInfoBox.ReadOnly       = $true
 $DiskInfoBox.Multiline      = $true
 $DiskInfoBox.ScrollBars     = 'Vertical'
-$DI                         = Get-DiskInfo $Hostname
+$DI                         = Get-DiskInfo -CimSession $CimSession
 $DiskInfoBox.Text           = ""
 $DI | ForEach-Object {
-  if ($_.DeviceName) {
-    $DiskInfoBox.AppendText("$($_.DeviceName) $($_.VolumeName)`r`n")
-    $DiskInfoBox.AppendText("  $($_.UsedSpace) Used, $($_.PartitionSize) Available`r`n")
-    $DiskInfoBox.AppendText("  $($_.FreeSpace) free`r`n")
-    $DiskInfoBox.AppendText("  $($_.FileSystem)`r`n")
-    $DiskInfoBox.AppendText("Physical Disk Information: $($_.DiskModel)`r`n")
-    $DiskInfoBox.AppendText("  $($_.TotalDiskSize) Total Size of Disk`r`n")
-    $DiskInfoBox.AppendText("  $($_.MediaType)`r`n")
-#    $DiskInfoBox.AppendText("  $($_.DiskSerial)`n")
-    $DiskInfoBox.AppendText("`r`n")
-  }
+  #if ($_.DeviceName) {
+  #  $DiskInfoBox.AppendText("$($_.DeviceName) $($_.VolumeName)`r`n")
+  #  $DiskInfoBox.AppendText("  $($_.UsedSpace) Used, $($_.PartitionSize) Available`r`n")
+  #  $DiskInfoBox.AppendText("  $($_.FreeSpace) free`r`n")
+  #  $DiskInfoBox.AppendText("  $($_.FileSystem)`r`n")
+  #  $DiskInfoBox.AppendText("Physical Disk Information: $($_.DiskModel)`r`n")
+  #  $DiskInfoBox.AppendText("  $($_.TotalDiskSize) Total Size of Disk`r`n")
+  #  $DiskInfoBox.AppendText("  $($_.MediaType)`r`n")
+# #   $DiskInfoBox.AppendText("  $($_.DiskSerial)`n")
+  #  $DiskInfoBox.AppendText("`r`n")
+  #}
+  $DiskInfoBox.AppendText("$($_.DeviceLetter) $($_.VolumeName)`r`n")
+  $DiskInfoBox.AppendText("   $($_.UsedSpace) Used, $($_.PartitionSize) Available`r`n")
+  $DiskInfoBox.AppendText("   $($_.FreeSpace) Free.  $($_.Partitions) Partitions`r`n")
+  $DiskInfoBox.AppendText("   Total disk size: $($_.TotalDiskSize)`r`n")
+  $DiskInfoBox.AppendText(" Physical Disk Information: $($_.Caption)`r`n")
+  $DiskInfoBox.AppendText("   FileSystem: $($_.FileSystem)`r`n")
+  $DiskInfoBox.AppendText("`r`n")
 }
 
-
+Write-Verbose "Gathering Network Information..."
 $NetworkLabel = New-Label -Text "Network Card" -Location (315,245) 
 $NetworkInfoBox = New-TextBox -Size (300, 210) -Location (315,268)
 $NetworkInfoBox.ReadOnly       = $true
 $NetworkInfoBox.Multiline      = $true
 $NetworkInfoBox.ScrollBars     = 'Vertical'
-$NI                         = Get-NetworkInfo $Hostname
 $NetworkInfoBox.Text           = ""
-$NetworkInfoBox.AppendText("Name: $($NI.Name)`r`n")
-#$NetworkInfoBox.AppendText("Manufacturer: $($NI.Manufacturer)`r`n")
-$NetworkInfoBox.AppendText("IP: $($NI.IPAddress)`r`n")
-$NetworkInfoBox.AppendText("Subnet: $($NI.IPSubnet)`r`n")
-$NetworkInfoBox.AppendText("Gateway: $($NI.DefaultIPGateway)`r`n")
-$NetworkInfoBox.AppendText("MAC Address: $($NI.MACAddress)`r`n")
-$NetworkInfoBox.AppendText("Adapter Type: $($NI.AdapterType)`r`n")
-$NetworkInfoBox.AppendText("Speed: $($NI.Speed)`r`n")
+Get-NetworkInfo -CimSession $CimSession | ForEach-Object {
+  Write-Verbose "Presenting Network Information for $($_.Name)"
+  #if ($_.Name -like "*Hyper-V*") {continue}
+  #if ($_.Name -like "*Virtual*") {continue}
 
-if ($NI.DHCPEnabled) {
-  $NetworkInfoBox.AppendText("DHCP Server: $($NI.DHCPServer)`r`n")
-  $NetworkInfoBox.AppendText("Lease Obtained: $($NI.DHCPLeaseObtained)`r`n")
-  $NetworkInfoBox.AppendText("Lease Expires: $($NI.DHCPLeaseExpires)`r`n")
+  $NetworkInfoBox.AppendText("Name: $($_.Name)`r`n")
+  #$NetworkInfoBox.AppendText("Manufacturer: $($_.Manufacturer)`r`n")
+  $NetworkInfoBox.AppendText("IP: $($_.IPAddress)`r`n")
+  $NetworkInfoBox.AppendText("Subnet: $($_.IPSubnet)`r`n")
+  $NetworkInfoBox.AppendText("Gateway: $($_.DefaultIPGateway)`r`n")
+  $NetworkInfoBox.AppendText("MAC Address: $($_.MACAddress)`r`n")
+  $NetworkInfoBox.AppendText("Adapter Type: $($_.AdapterType)`r`n")
+  $NetworkInfoBox.AppendText("Speed: $($_.Speed)`r`n")
+
+  if ($_.DHCPEnabled) {
+    $NetworkInfoBox.AppendText("DHCP Server: $($_.DHCPServer)`r`n")
+    $NetworkInfoBox.AppendText("Lease Obtained: $($_.DHCPLeaseObtained)`r`n")
+    $NetworkInfoBox.AppendText("Lease Expires: $($_.DHCPLeaseExpires)`r`n")
+  }
+
+  $NetworkInfoBox.AppendText("DNS Hostname: $($_.DNSHostName)`r`n")
+  $NetworkInfoBox.AppendText("DNS Domain: $($_.DNSDomain)`r`n")
+  $NetworkInfoBox.AppendText("Last Reset: $($_.TimeOfLastReset)`r`n")
+
+  $NetworkInfoBox.AppendText("*==*`r`n`r`n")
 }
-
-$NetworkInfoBox.AppendText("DNS Hostname: $($NI.DNSHostName)`r`n")
-$NetworkInfoBox.AppendText("DNS Domain: $($NI.DNSDomain)`r`n")
-$NetworkInfoBox.AppendText("Last Reset: $($NI.TimeOfLastReset)`r`n")
+Write-Verbose "Generated Network Information Box."
 
 <#
 $UserLabel                  = New-Object System.Windows.Forms.Label       #
@@ -177,7 +194,7 @@ $UserInfoBox.ForeColor      = $Config.ColorScheme.Foreground              # i go
 $UserInfoBox.Location       = New-Object System.Drawing.Point(10,300)     #
 $UserInfoBox.ScrollBars     = 'Vertical'                                  #>
 
-$MoreInfoButton = New-Button -Text "More Information" -Location (10, 245)
+$MoreInfoButton = New-Button -Text "More Information" -Location (10, 245) -Size (10, 10)
 $MoreInfoButton.AutoSize    = $true
 
 $MoreInfoButton.Add_Click({
@@ -194,13 +211,13 @@ $MoreInfoButton.Add_Click({
 
 $ViewSoftwareButton          = New-Object System.Windows.Forms.Button     #
 #$ViewSoftwareButton.Size     = New-Object System.Drawing.Size(110, 23)  # not sure if they were sized manually for a reason but we're trying autosizing
-$ViewSoftwareButton.AutoSize = $true                                      #
-$ViewSoftwareButton.Location = New-Object System.Drawing.Point(145, 245)  #
-$ViewSoftwareButton.Text     = "View Installed Software"                  #
-$ViewSoftwareButton.FlatStyle= $global:FlatStyle                          #
+#$ViewSoftwareButton.AutoSize = $true                                      #
+#$ViewSoftwareButton.Location = New-Object System.Drawing.Point(145, 245)  #
+#$ViewSoftwareButton.Text     = "View Installed Software"                  #
+#$ViewSoftwareButton.FlatStyle= $global:FlatStyle                          #
 
 $ViewSoftwareButton.Add_Click({
-  #$IS = Get-InstalledSoftware $Hostname                                   #
+  #$IS = Get-InstalledSoftware -CimSession $CimSession                                   #
   [System.Windows.Forms.MessageBox]::Show("Looks like you've found a new feature! We haven't implemented this one quiiiiite yet, but someday we'll have this button launch a window where you can see a list of all the software on a computer, and remotely uninstall most of it.", "Pardon our dust!")                   #
 })
 
@@ -209,9 +226,10 @@ $Form.Controls.AddRange(@(
   $HardwareLabel,$HardwareInfoBox,
   $SoftwareLabel,$SoftwareInfoBox,
   $DiskLabel,$DiskInfoBox,
-  $NetworkLabel,$NetworkInfoBox
+  $NetworkLabel,$NetworkInfoBox,
   #$UserLabel,$UserInfoBox
   $MoreInfoButton #,
 #  $ViewSoftwareButton
 ))
+
 $Form.ShowDialog()

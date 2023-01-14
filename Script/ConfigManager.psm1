@@ -11,13 +11,13 @@ $script:SelectedDesignScheme = "Classic"
 #  return $script:Config.Configuration.SoftwareFolderLocation.Location
 #}
 
-function Get-ConnectedMDTShareLocation {
-  return $script:ConnectedMDTShareLocation
-}
+#function Get-ConnectedMDTShareLocation {
+#  return $script:ConnectedMDTShareLocation
+#}
 
-function Set-ConnectedMDTShareLocation ($ShareLocation) {
-  $script:ConnectedMDTShareLocation = $ShareLocation
-}
+#function Set-ConnectedMDTShareLocation ($ShareLocation) {
+#  $script:ConnectedMDTShareLocation = $ShareLocation
+#}
 
 function Get-BackgroundColor {
   return $script:Config.Configuration.$script:SelectedColorScheme.BackColor
