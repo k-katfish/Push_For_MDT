@@ -517,6 +517,47 @@ function Get-NetworkInfo {
   }
 }
 
+function Get-GPUInfo {
+  <#
+  .SYNOPSIS
+    Get some helpful information about the GPU in a computer
+  .DESCRIPTION
+    Send this a hostname to scan, it will return a PS object {Name, ResolutionString, CurrentRefreshRate, MaxRefreshRate, DriverVersion }
+  .PARAMETER Hostname
+    The name of a computer to scan
+  .EXAMPLE
+    Get-GPUInfo Server-01
+  #>
+  param(
+    [Parameter()][String]$Hostname,
+    [Parameter()][CimSession]$CimSession
+  )
+
+  $VideoConfiguration = ""
+  #$NetworkAdapter = ""
+
+  if ($Hostname) {
+    $VideoConfiguration = Get-CimInstance Win32_VideoController -ComputerName $Hostname
+  } elseif ($CimSession) {
+    $VideoConfiguration = Get-CimInstance Win32_VideoController -CimSession $CimSession
+  }
+
+
+  $GPUInfo = $VideoConfiguration | ForEach-Object {
+    [PSCustomObject]@{
+      Name          = $_.Name
+      Caption       = $_.Caption
+      DriverDate    = $_.DriverDate
+      DriverVersion = $_.DriverVersion
+      VRAM          = [String]([Math]::Floor($_.AdapterRAM / (1024 * 1024 * 1024))) + "GB"
+      ChipName      = $_.VideoProcessor
+      CurrentResolution = "$($_.CurrentHorizontalResolution) x $($_.CurrentVerticalResolution) px @ $($_.CurrentRefreshRate) Hz"
+    }
+  }
+
+  return $GPUInfo
+}
+
 
 #Export-ModuleMember -Function Get-HardwareInfo -Alias Get-HardwareInformation
 #Export-ModuleMember -Function Get-ProcessorInfo -Alias Get-ProcessorInformation
