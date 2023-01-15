@@ -33,6 +33,7 @@ if ($help) {
 
 if (Get-Module ConfigManager) { Remove-Module ConfigManager }
 if (Get-Module Install_Software) { Remove-Module Install_Software }
+if (Get-Module InstallSoftware) { Remove-Module InstallSoftware }
 if (Get-Module GUIManager) { Remove-Module GUIManager }
 if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
 if (Get-Module CredentialManager) { Remove-Module CredentialManager}
@@ -40,6 +41,7 @@ if (Get-Module MDTManager) { Remove-Module MDTManager }
 
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\Install_Software.psm1
+Import-Module $PSScriptRoot\InstallSoftware.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
 Import-Module $PSScriptRoot\ToolStripManager.psm1
 Import-Module $PSScriptRoot\CredentialManager.psm1
@@ -61,7 +63,6 @@ $GUIForm.Icon               = "$PSScriptRoot\..\Media\Icon.ico"
 $GUIForm.StartPosition      = 'CenterScreen'
 $GUIForm.BackColor = Get-BackgroundColor
 
-#$SelectGroupLabel     = New-Label -Text "Select Group:" -Location (5,27)
 $SelectGroup          = New-ComboBox -Text "Select Group..." -Location (16,25) -Size (256, 23)
 
 $SelectAll            = New-Button -Text "Select All" -Location (16,50) -Size (128,23)
@@ -185,7 +186,20 @@ $InstallOnSelMachines.Add_Click({
 $ManualNameTextBox.Add_KeyDown({
   If ($PSItem.KeyCode -eq "Enter"){
     $ScanComputer.PerformClick()
-    $LoadingIcon.PerformClick()
+    if ($ManualNameTextBox.Text.Length -ge 4) {
+      $OKIcon.Visible = $false
+      $OfflineIcon.Visible = $false
+      $LoadingIcon.Visible = $true
+      if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
+        $OKIcon.Visible = $true
+        $OfflineIcon.Visible = $false
+        $LoadingIcon.Visible = $false
+      } else {
+        $OKIcon.Visible = $false
+        $OfflineIcon.Visible = $true
+        $LoadingIcon.Visible = $false
+      }
+    }
   }
 })
 
@@ -234,10 +248,17 @@ $ApplyToManualEntry.Add_Click({
   if ($CredentialObject -eq -1) {
     return
   }
-  $SelectedComputer = $ManualNameTextBox.text
-  $SelectedSoftware = $TaskSequencesList.SelectedItems
-  Write-Verbose "Installing $SelectedSoftware on $SelectedComputer"
-  Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
+  #$SelectedComputer = $ManualNameTextBox.text
+  #$SelectedSoftware = $TaskSequencesList.SelectedItems
+  #Write-Verbose "Installing $SelectedSoftware on $SelectedComputer"
+  #Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
+
+  if ($ApplyToManualEntry.Text -eq "Install Selected Apps") {
+    Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
+  } elseif ($ApplyToManualEntry.Text -eq "Run Task Sequence") {
+    Write-Verbose "Planning to launch TS: $($TaskSequencesList.SelectedItem) on $($ManualNameTextBox.Text)"
+    Invoke-StartTaskSequence -ComputerName $ManualNameTextBox.Text -TaskSequence $TaskSequencesList.SelectedItem -Credential $CredentialObject
+  }
 })
 
 $EnterPS.Add_Click({

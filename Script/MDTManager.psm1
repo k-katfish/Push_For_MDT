@@ -157,6 +157,14 @@ function Get-MDTTSList ($IncludeHidden) {
     return $TSList
 }
 
+function Get-TaskSequenceIDFromName ($TaskSequenceName) {
+    $script:ControlTaskSequencesXML.tss.ts | ForEach-Object {
+        if ($_.Name -eq $TaskSequenceName) {
+            return $_.ID
+        }
+    }
+}
+
 
 if (-Not (Get-Module ConfigManager)) { Import-Module $PSScriptRoot\ConfigManager.psm1 }
 if (Get-CachedMDTShareLocation) {
