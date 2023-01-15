@@ -1,23 +1,40 @@
-$script:Config = [XML](Get-Content $PSScriptRoot\config.xml)
-$script:SelectedColorScheme = "Dark"
-$script:SelectedDesignScheme = "Classic"
+function LoadConfiguration {
+  if (-Not (Test-Path "$env:APPDATA\Push\")) {
+    New-Item -Path "$env:APPDATA\Push\" -ItemType Directory
+    New-Item -Path "$env:APPDATA\Push\Media" -ItemType Directory
+  }
 
-#function Get-GroupsFolderLocation {
-#  if ($script:Config.Configuration.GroupsFolderLocation.isUNC -like "*true*") { return $script:Config.Configuration.GroupsFolderLocation.Location }
-#  else { return $script:Config.Configuration.GroupsFolderLocation.Location }
-#}
+  if (-Not (Test-Path "$env:APPDATA\Push\config.xml")) {
+    Copy-Item $PSScriptRoot\config.xml "$env:APPDATA\Push\config.xml"
+  }
 
-#function Get-SoftwareFolderLocation {
-#  return $script:Config.Configuration.SoftwareFolderLocation.Location
-#}
+  $script:Config = [XML](Get-Content "$env:APPDATA\Push\config.xml")
+  $script:SelectedColorScheme = $script:Config.Configuration.SelectedColorScheme.Name
+  $script:SelectedDesignScheme = $script:Config.Configuration.SelectedDesignScheme.Name
+}
+LoadConfiguration
 
-#function Get-ConnectedMDTShareLocation {
-#  return $script:ConnectedMDTShareLocation
-#}
+function Get-GroupsFolderLocation {
+  return $script:Config.Configuration.GroupsFolder.Location
+}
 
-#function Set-ConnectedMDTShareLocation ($ShareLocation) {
-#  $script:ConnectedMDTShareLocation = $ShareLocation
-#}
+function Get-CachedMDTShareLocation {
+  return $script:Config.Configuration.DefaultMDTShare.Location
+}
+
+function Set-CachedMDTShareLocation ($ShareLocation) {
+  Write-Verbose "Caching MDT Share Location of $ShareLocation to $env:APPDATA\Push\config.xml"
+  #$EditConfig = New-Object xml
+  #$EditConfig.Load("$env:APPDATA\Push\config.xml")
+  #$EditConfig.Configuration.DefaultMDTShare.Location = $ShareLocation
+  #$EditConfig.Save("$env:APPDATA\Push\config.xml")
+
+  $script:Config.Configuration.DefaultMDTShare.Location = $ShareLocation
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
+
+  #LoadConfiguration
+  Write-Verbose "Cached MDT Share Location: $(Get-CachedMDTShareLocation)"
+}
 
 function Get-BackgroundColor {
   return $script:Config.Configuration.$script:SelectedColorScheme.BackColor
