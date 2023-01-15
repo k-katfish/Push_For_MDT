@@ -24,15 +24,10 @@ function Get-CachedMDTShareLocation {
 
 function Set-CachedMDTShareLocation ($ShareLocation) {
   Write-Verbose "Caching MDT Share Location of $ShareLocation to $env:APPDATA\Push\config.xml"
-  #$EditConfig = New-Object xml
-  #$EditConfig.Load("$env:APPDATA\Push\config.xml")
-  #$EditConfig.Configuration.DefaultMDTShare.Location = $ShareLocation
-  #$EditConfig.Save("$env:APPDATA\Push\config.xml")
 
   $script:Config.Configuration.DefaultMDTShare.Location = $ShareLocation
   $script:Config.Save("$env:APPDATA\Push\config.xml")
 
-  #LoadConfiguration
   Write-Verbose "Cached MDT Share Location: $(Get-CachedMDTShareLocation)"
 }
 
@@ -77,13 +72,63 @@ function Get-FontSettings {
 }
 
 function Set-ColorScheme ($SchemeName) {
+  Write-Verbose "New ColorScheme Requested: $SchemeName"
   $script:SelectedColorScheme = $SchemeName
+  Write-Verbose "Caching desired color schme: $script:SelectedColorScheme to $env:APPDATA\Push\config.xml"
+
+  $script:Config.Configuration.SelectedColorScheme.Name = $SchemeName
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
+
+  Write-Verbose "Cached Color Scheme: $($script:Config.Configuration.SelectedColorScheme.Name)"
 }
 
-function Set-DesignSecheme ($SchemeName) {
+function Invoke-NextColorScheme {
+  Write-Verbose "Next Color Scheme requested."
+  $AvailableSchemes = $script:Config.Configuration.AvailableColorSchemes.Schemes.Split(",")
+  $CurrentCS = $AvailableSchemes.IndexOf($script:SelectedColorScheme)
+  if ($CurrentCS -eq -1) { $CurrentCS = 0}
+  $NextScheme = ""
+  if ($CurrentCS -eq $AvailableSchemes.Length - 1) {
+    $NextScheme = $AvailableSchemes[0]
+  } else {
+    $NextScheme = $AvailableSchemes[$CurrentCS + 1]
+  }
+  
+  Write-Verbose "Current Scheme: $script:SelectedColorScheme. Incrementing to $NextScheme."
+  Set-ColorScheme $NextScheme
+}
+
+function Set-DesignScheme ($SchemeName) {
+  Write-Verbose "New Design Scheme Requested: $SchemeName"
   $script:SelectedDesignScheme = $SchemeName
+  Write-Verbose "Caching desired color schme: $script:SelectedDesignScheme to $env:APPDATA\Push\config.xml"
+
+  $script:Config.Configuration.SelectedDesignScheme.Name = $SchemeName
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
+
+  Write-Verbose "Cached Design Scheme: $($script:Config.Configuration.SelectedDesignScheme.Name)"
+}
+
+function Invoke-NextDesignScheme {
+  Write-Verbose "Next Design Scheme requested."
+  $AvailableSchemes = $script:Config.Configuration.AvailableDesignSchemes.Schemes.Split(",")
+  $CurrentDS = $AvailableSchemes.IndexOf($script:SelectedDesignScheme)
+  if ($CurrentDS -eq -1) { $CurrentDS = 0}
+  $NextScheme = ""
+  if ($CurrentDS -eq $AvailableSchemes.Length - 1) {
+    $NextScheme = $AvailableSchemes[0]
+  } else {
+    $NextScheme = $AvailableSchemes[$CurrentDS + 1]
+  }
+  
+  Write-Verbose "Current Scheme: $script:SelectedDesignScheme. Incrementing to $NextScheme."
+  Set-DesignScheme $NextScheme
 }
 
 function Set-ConfigurationFile ($Configuration_File) {
+  Write-Verbose "Configuration File Change Requested"
   $script:Config = [XML](Get-Content $Configuration_File)
+
+  Write-Verbose "Caching Configuration data to $env:APPDATA\Push\config.xml"
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
 }

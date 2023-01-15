@@ -1,4 +1,5 @@
 <Configuration>
+  <AvailableColorSchemes Schemes = "Dark,Light,Tomorrow"/>
   <Dark>
     <BackColor>255, 29, 31,  33</BackColor>
     <ForeColor>255, 197, 200, 198</ForeColor>
@@ -26,6 +27,7 @@
     <Warning>255, 249,  238,  152</Warning>
     <Error>255, 207,  106,  76</Error>
   </Tomorrow>
+  <AvailableDesignSchemes Schemes = "Classic,Modern,Yesterday"/>
   <Classic>
     <FlatStyle>Flat</FlatStyle>
     <BorderStyle>FixedSingle</BorderStyle>
