@@ -177,7 +177,7 @@ Write-Verbose "Generated Network Information Box."
 
 
 Write-Verbose "Gathering GPU Information"
-$GPULabel = New-Label -Text "Network Card" -Location (620,245) 
+$GPULabel = New-Label -Text "Graphics Card (GPU)" -Location (620,245) 
 $GPUInfoBox = New-TextBox -Size (300, 210) -Location (620,268)
 $GPUInfoBox.ReadOnly       = $true
 $GPUInfoBox.Multiline      = $true
