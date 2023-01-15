@@ -96,6 +96,23 @@ function New-Checkbox ($Text, $Location, $Size) {
   return $Checkbox
 }
 
+function New-PictureBox ($Image, $Location) {
+  $Image = Get-Item "$Image"
+  Write-Verbose "Testing for image at $("$env:APPDATA\Push\Media\$($Image.Name)")"
+  if (-Not (Test-Path "$env:APPDATA\Push\Media\$($Image.Name)")) {
+    Write-Verbose "Not found. Copying image from $Image to $("$env:APPDATA\Push\Media\$($Image.Name)")"
+    Copy-Item $Image "$env:APPDATA\Push\Media\$($Image.Name)"
+  }
+  $Picture = [System.Drawing.Image]::FromFile("$env:APPDATA\Push\Media\$($Image.Name)")
+
+  $PictureBox = New-Object System.Windows.Forms.PictureBox
+  $PictureBox.Location = New-Object System.Drawing.Point($Location[0], $Location[1])
+  $PictureBox.Size = New-Object System.Drawing.Size($Picture.Width,$Picture.Height)
+  $PictureBox.Image = $Picture
+
+  return $PictureBox
+}
+
 function New-MessageBox ($Text, $Caption, $Buttons = 'OKCancel', $DefaultButton = 0, $Icon = 'Asterisk') {
   <#  Button types: AbortRetryIgnore , CancelTryContinue , OK , OKCancel , RetryCancel , YesNo , YesNoCancel
       Default Button: 0 (first), 256 (second), 512 (third), 768 (help) 

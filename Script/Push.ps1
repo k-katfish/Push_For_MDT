@@ -72,12 +72,20 @@ $InstallOnSelMachines = New-Button -Text "Install Now" -Location (16,369) -Size 
 $ManualSectionHeader  = New-Label -Text "Work on a single computer: " -Location (625, 25) 
 $OrLabel              = New-Label -Text "Enter Name:" -Location (625,50)
 $ManualNameTextBox    = New-TextBox -Location (625,75) -Size (256, 25)
+
+$LoadingIcon = New-PictureBox -Location (881, 75) -Image "$PSScriptRoot\..\Media\loading.jpg"
+$LoadingIcon.Visible = $false
+$OKIcon = New-PictureBox -Location (881, 75) -Image "$PSScriptRoot\..\Media\ok.jpg"
+$OKIcon.Visible = $false
+$OfflineIcon = New-PictureBox -Location (881, 75) -Image "$PSScriptRoot\..\Media\offline.jpg"
+$OfflineIcon.Visible = $false
+
 $ApplyToManualEntry   = New-Button -Text "Install Now" -Location (625,100) -Size (256,25)
 $EnterPS              = New-Button -Text "Enter PSSession" -Location (625,125) -Size (256,25)
 $ScanComputer         = New-Button -Text "Scan Computer" -Location (625,150) -Size (256,25)
 
 #$TSListFilterLabel       = New-Label -Text "Show: " -Location (275, 25)
-$TaskSequencesListFilter = New-ComboBox -Text "Filter..." -Location (275, 25) -Size (345, 23)
+$TaskSequencesListFilter = New-ComboBox -Location (275, 25) -Size (345, 23)
 
 $TaskSequencesList    = New-ListBox -Size (345, 225) -Location (275,50)
 $SoftwareFilterTextBox= New-TextBox -Size (150,23) -Location (330,264)
@@ -91,6 +99,7 @@ $GUIForm.Controls.AddRange(@(
   $SelectGroupLabel, $SelectGroup,
   $SelectAll, $SelectNone, $MachineList, $InstallOnSelMachines,
   $ManualSectionHeader, $OrLabel, $ManualNameTextBox,
+  $LoadingIcon, $OKIcon, $OfflineIcon,
   $ApplyToManualEntry, $EnterPS, $ScanComputer,
   $TaskSequencesListFilter,
   $TaskSequencesList, $FixesCheckBox,
@@ -108,8 +117,23 @@ $OutputBox.ScrollBars             = "Vertical,Horizontal"
 
 $SelectGroup.Items.Add("All Machines") *> $null
 
-$TaskSequencesListFilter.Items.AddRange(@("Everything", "Applications", "Task Sequences"))
-$TaskSequencesListFilter.Add_SelectedIndexChanged({ Set-TaskSequenceListItems })
+$TaskSequencesListFilter.Items.AddRange(@("Applications", "Task Sequences"))
+$TaskSequencesListFilter.SelectedIndex = 0
+$TaskSequencesListFilter.Add_SelectedIndexChanged({ 
+  Set-TaskSequenceListItems 
+  switch ($TaskSequencesListFilter.Text) {
+    "Applications" {
+      $TaskSequencesList.SelectionMode = 'MultiSimple'
+      $InstallOnSelMachines.Text = "Install Selected Apps"
+      $ApplyToManualEntry.Text = "Install Selected Apps"
+    }
+    "Task Sequences" {
+      $TaskSequencesList.SelectionMode = 'One'
+      $InstallOnSelMachines.Text = "Run Task Sequence"
+      $ApplyToManualEntry.Text = "Run Task Sequence"
+    }
+  }
+})
 
 Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
   $GroupName = $_.Name.Substring(0,$_.Name.length-4)
@@ -162,6 +186,61 @@ $ManualNameTextBox.Add_KeyDown({
   If ($PSItem.KeyCode -eq "Enter"){
     $ScanComputer.PerformClick()
   }
+})
+
+$OfflineIcon.Visible = $true
+$OfflineIcon.Add_MouseHover({
+  if ($ManualNameTextBox.Text.Length -ge 4) {
+    $OKIcon.Visible = $false
+    $OfflineIcon.Visible = $false
+    $LoadingIcon.Visible = $true
+    if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
+      $OKIcon.Visible = $true
+      $OfflineIcon.Visible = $false
+      $LoadingIcon.Visible = $false
+    } else {
+      $OKIcon.Visible = $false
+      $OfflineIcon.Visible = $true
+      $LoadingIcon.Visible = $false
+    }
+  }
+})
+$OfflineIcon.Add_Click({
+  if ($ManualNameTextBox.Text.Length -ge 4) {
+    $OKIcon.Visible = $false
+    $OfflineIcon.Visible = $false
+    $LoadingIcon.Visible = $true
+    if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
+      $OKIcon.Visible = $true
+      $OfflineIcon.Visible = $false
+      $LoadingIcon.Visible = $false
+    } else {
+      $OKIcon.Visible = $false
+      $OfflineIcon.Visible = $true
+      $LoadingIcon.Visible = $false
+    }
+  }
+})
+#[System.Windows.Forms.ToolTip]::SetToolTip($OfflineIcon, "Is the computer online?")
+
+$ManualNameTextBox.Add_TextChanged({
+  $OKIcon.Visible = $false
+  $OfflineIcon.Visible = $true
+#  $LoadingIcon.Visible = $true
+  #if ($ManualNameTextBox.Text.Length -ge 4) {
+  #  $OKIcon.Visible = $false
+  #  $OfflineIcon.Visible = $false
+  #  $LoadingIcon.Visible = $true
+  #  if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
+  #    $OKIcon.Visible = $true
+  #    $OfflineIcon.Visible = $false
+  #    $LoadingIcon.Visible = $false
+  #  } else {
+  #    $OKIcon.Visible = $false
+  #    $OfflineIcon.Visible = $true
+  #    $LoadingIcon.Visible = $false
+  #  }
+  #}
 })
 
 $ApplyToManualEntry.Add_Click({
@@ -221,6 +300,7 @@ function Set-TaskSequenceListItems {
     }
   }
 }
+Set-TaskSequenceListItems
 
 $SoftwareFilterTextBox.Add_TextChanged({ Set-TaskSequenceListItems })
 #$SoftwareFilterTextBox.Add_Click({ Set-TaskSequenceListItems })
@@ -346,3 +426,5 @@ $GUIForm.ShowDialog()
 # theITBros      | For each item in a folder                      | https://theitbros.com/powershell-script-for-loop-through-files-and-folders/                                                                         #
 # itechguides    | For each line in a file                        | https://www.itechguides.com/foreach-in-file-powershell/                                                                                             #
 #########################################################################################################################################################################################################################
+
+# https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/test-connection?view=powershell-7.3 # - Test-Connection

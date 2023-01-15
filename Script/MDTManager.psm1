@@ -1,5 +1,6 @@
 $script:ControlApplicationsXML = ""
 $script:ControlTaskSequencesXML = ""
+$script:MDTShareLocation = ""
 
 function Connect-DeploymentShare {
     if (-Not (Get-Module GUIManager)) { Import-Module $PSScriptRoot\GUIManager.psm1 }
@@ -19,9 +20,16 @@ function Connect-DeploymentShare {
     $ConnectButton.Add_Click({
         try {
             $ProspectiveMDTShareLocation = $PathTextBox.Text
-            if ($ProspectiveMDTShareLocation -like "\:") { $ProspectiveMDTShareLocation = (Get-PSDrive $ProspectiveMDTShareLocation.Substring(0,1)).Root }
+            Write-Verbose "Is this a UNC Path?"
+            if ($ProspectiveMDTShareLocation -like "*:*") { 
+                Write-Verbose "Mapped Drive path provided. Grabbing UNC path from PSDrive information" 
+                $ProspectiveMDTShareLocation = (Get-PSDrive $ProspectiveMDTShareLocation.Substring(0,1)).DisplayRoot
+                Write-Verbose "Using MDT Share Location $ProspectiveMDTShareLocation"
+            }
             
+            Write-Verbose "Looking for Applications.xml file in Control folder at $ProspectiveMDTShareLocation"
             if (Test-Path "$($ProspectiveMDTShareLocation)\Control\Applications.xml") {
+                Write-Verbose "Found Applications file: $($ProspectiveMDTShareLocation)\Control\Applications.xml"
                 Set-DeploymentShareLocation $ProspectiveMDTShareLocation
                 Set-MDTControlData
                 #New-ToastNotification -Title "Success" -Content "Successfully connected to the deployment share at $ProspectiveMDTShareLocation. You can change this at any time by going to File -> Connect to Deployment Share." -TitleIcon 'Information'
@@ -48,6 +56,7 @@ function Connect-DeploymentShare {
 
 function Set-DeploymentShareLocation ($Path) {
     $script:MDTShareLocation = $Path #I'm an idiot. I wrote $script:MDTShareLocation and then forgot to add the = $Path, and spent like 2 days trying to figure out why the rest of everything else wasn't working :facepalm:
+    Set-CachedMDTShareLocation $Path
 }
 
 function Get-DeploymentShareLocation {
@@ -146,4 +155,12 @@ function Get-MDTTSList ($IncludeHidden) {
     }
     $TSList.Sort()
     return $TSList
+}
+
+
+if (-Not (Get-Module ConfigManager)) { Import-Module $PSScriptRoot\ConfigManager.psm1 }
+if (Get-CachedMDTShareLocation) {
+    Write-Verbose "Loading MDTShare Location of $(Get-CachedMDTShareLocation) from Cache"
+    $script:MDTShareLocation = Get-CachedMDTShareLocation
+    Set-MDTControlData
 }
