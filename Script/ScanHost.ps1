@@ -78,7 +78,7 @@ else { $HardwareInfoBox.AppendText("Workgroup: $($HW.Workgroup)`r`n") }
 $HardwareInfoBox.AppendText("Make: $($HW.Manufacturer)`r`n")
 $HardwareInfoBox.AppendText("Model: $($HW.Model)`r`n")
 $HardwareInfoBox.AppendText("Serial: $($HW.Serial)`r`n")
-$HardwareInfoBox.AppendText("UUID: $($HW.UUID)`r`n")
+$HardwareInfoBox.AppendText("UUID:`r`n$($HW.UUID)`r`n")
 $HardwareInfoBox.AppendText("Installed RAM: $($HW.RAM)`r`n")
 
 Write-Verbose "Gathering OS Information..."
@@ -175,6 +175,23 @@ Get-NetworkInfo -CimSession $CimSession | ForEach-Object {
 }
 Write-Verbose "Generated Network Information Box."
 
+
+Write-Verbose "Gathering GPU Information"
+$GPULabel = New-Label -Text "Network Card" -Location (620,245) 
+$GPUInfoBox = New-TextBox -Size (300, 210) -Location (620,268)
+$GPUInfoBox.ReadOnly       = $true
+$GPUInfoBox.Multiline      = $true
+$GPUInfoBox.ScrollBars     = 'Vertical'
+$GPUInfoBox.Text           = ""
+Get-GPUInfo -CimSession $CimSession | ForEach-Object {
+  $GPUInfoBox.AppendText("Name: $($_.Name)`r`n")
+  $GPUInfoBox.AppendText("Driver Version: $($_.DriverVersion)`r`n")
+  $GPUInfoBox.AppendText("vRAM: $($_.VRAM)`r`n")
+  $GPUInfoBox.AppendText("Chip: $($_.ChipName)`r`n")
+  $GPUInfoBox.AppendText("Current Resolution: $($_.CurrentResolution)`r`n")
+  $GPUInfoBox.AppendText("`r`n")
+}
+
 <#
 $UserLabel                  = New-Object System.Windows.Forms.Label       #
 $UserLabel.Size             = New-Object System.Drawing.Size(100,23)      #
@@ -227,6 +244,7 @@ $Form.Controls.AddRange(@(
   $SoftwareLabel,$SoftwareInfoBox,
   $DiskLabel,$DiskInfoBox,
   $NetworkLabel,$NetworkInfoBox,
+  $GPULabel, $GPUInfoBox,
   #$UserLabel,$UserInfoBox
   $MoreInfoButton #,
 #  $ViewSoftwareButton
