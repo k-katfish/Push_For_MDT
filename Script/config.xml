@@ -44,6 +44,6 @@
     <FontName>Open Sans</FontName>
     <FontSize>11</FontSize>
   </Yesterday>
-  <GroupsFolderLocation Location="\\MDTServer\MDTShare\Groups"/>
-  <DefaultMDTShare Location="\\MDTServer\MDTShare"/>
+  <GroupsFolderLocation Location=""/>
+  <DefaultMDTShare Location=""/>
 </Configuration>
