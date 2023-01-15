@@ -185,11 +185,11 @@ $InstallOnSelMachines.Add_Click({
 $ManualNameTextBox.Add_KeyDown({
   If ($PSItem.KeyCode -eq "Enter"){
     $ScanComputer.PerformClick()
+    $LoadingIcon.PerformClick()
   }
 })
 
-$OfflineIcon.Visible = $true
-$OfflineIcon.Add_MouseHover({
+$LoadingIcon.Add_Click({
   if ($ManualNameTextBox.Text.Length -ge 4) {
     $OKIcon.Visible = $false
     $OfflineIcon.Visible = $false
@@ -225,22 +225,8 @@ $OfflineIcon.Add_Click({
 
 $ManualNameTextBox.Add_TextChanged({
   $OKIcon.Visible = $false
-  $OfflineIcon.Visible = $true
-#  $LoadingIcon.Visible = $true
-  #if ($ManualNameTextBox.Text.Length -ge 4) {
-  #  $OKIcon.Visible = $false
-  #  $OfflineIcon.Visible = $false
-  #  $LoadingIcon.Visible = $true
-  #  if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
-  #    $OKIcon.Visible = $true
-  #    $OfflineIcon.Visible = $false
-  #    $LoadingIcon.Visible = $false
-  #  } else {
-  #    $OKIcon.Visible = $false
-  #    $OfflineIcon.Visible = $true
-  #    $LoadingIcon.Visible = $false
-  #  }
-  #}
+  $OfflineIcon.Visible = $false
+  $LoadingIcon.Visible = $true
 })
 
 $ApplyToManualEntry.Add_Click({
@@ -421,8 +407,6 @@ $GCMNextDesignScheme.Add_Click({
 $GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme))
 
 $GUIForm.ContextMenuStrip = $GUIContextMenu
-
-
 
 #Invoke-GenerateGUI -Config $Config -Application "PUSH"
 $GUIForm.ShowDialog()
