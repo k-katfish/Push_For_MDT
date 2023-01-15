@@ -380,7 +380,7 @@ $GUIForm.Controls.Add($ToolStrip)
 
 $GUIContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
 
-$GCMSetDarkMode = New-Object System.Windows.Forms.ToolStripMenuItem
+<#$GCMSetDarkMode = New-Object System.Windows.Forms.ToolStripMenuItem
 $GCMSetLightMode = New-Object System.Windows.Forms.ToolStripMenuItem
 
 $GCMSetDarkMode.Text = "Change to Dark Mode"
@@ -400,7 +400,25 @@ $GCMSetLightMode.Add_Click({
   RefreshToolStrip -ToolStrip $ToolStrip 
 })
 
-$GUIContextMenu.Items.Add($GCMSetLightMode)
+$GUIContextMenu.Items.Add($GCMSetLightMode)#>
+
+$GCMNextColorScheme = New-Object System.Windows.Forms.ToolStripMenuItem
+$GCMNextColorScheme.Text = "Switch Color Scheme"
+$GCMNextColorScheme.Add_Click({
+  Invoke-NextColorScheme
+  Invoke-RefreshColors $GUIForm
+  RefreshToolStrip -ToolStrip $ToolStrip
+})
+
+$GCMNextDesignScheme = New-Object System.Windows.Forms.ToolStripMenuItem
+$GCMNextDesignScheme.Text = "Switch Design Scheme"
+$GCMNextDesignScheme.Add_Click({
+  Invoke-NextDesignScheme
+  Invoke-RefreshDesign $GUIForm
+  RefreshToolStrip -ToolStrip $ToolStrip
+})
+
+$GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme))
 
 $GUIForm.ContextMenuStrip = $GUIContextMenu
 

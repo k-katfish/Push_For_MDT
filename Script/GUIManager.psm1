@@ -17,6 +17,20 @@ function Invoke-RefreshColors ($Form) {
   }
 }
 
+function Invoke-RefreshDesign ($Form) {
+  $Form.BackColor = Get-BackgroundColor
+  $Form.ForeColor = Get-ForegroundColor
+  $Form.Controls | ForEach-Object {
+    try {
+      $_.BorderStyle = Get-BorderStyle
+      $_.FlatStyle = Get-FlatStyle
+    } catch {}
+    $_.BackColor = Get-BackgroundColor
+    $_.ForeColor = Get-ForegroundColor
+    $_.Font = Get-FontSettings
+  }
+}
+
 function New-WinForm ($Text, $Size, $Icon, $StartPosition = 'CenterScreen', $AutoSize) {
   $Form = New-Object System.Windows.Forms.Form
   $Form.Text = $Text
