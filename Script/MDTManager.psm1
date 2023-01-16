@@ -175,7 +175,27 @@ function Get-ApplicationData {
         Note: the returned WorkingDirectory will be modified to include the name of the MDT share. For example, if you have an application
         who's working directory is .\Applications\My-App, the returned PS object will prepend the MDT share: \\[MDTServer]\[MDTShare]\Applications\My-App.
         If the application's working directory is located on a different share (ex. \\MySoftwareServer\MySoftwareShare\Software\My-App) then the returned
-        working directory string will not be altered (ex. \\MySoftwareServer\MySoftwareShare\Software\My-App)
+        working directory string will not be altered (ex. \\MySoftwareServer\MySoftwareShare\Software\My-App).
+    .INPUTS
+        String: Application Name OR (listof) Strings: Application Names
+    .OUTPUTS
+        A list of PSCustomObjects defined by: {
+            Name = Name of the application
+            GUID = Application's GUID
+            CommandLine = the command line used to install the application
+            WorkingDirectory = the full path to a network share or other directory where the application installer is located
+        }
+    .NOTES
+        Version:          1.0
+        Authors:          Kyle Ketchell
+        Version Creation: January 16, 2023
+        Orginal Creation: January 16, 2023
+    .Parameter Name
+        [Required] The visible name of an Application to install. The application name must match with the <Name> tag of an application in the Applications.xml file in MDT's Contro folder.
+    .EXAMPLE
+        Get-ApplicationData -Name "MyApp"
+    .EXAMPLE
+        Get-ApplicationData -Name "MyApp","MyApp2"
     #>
     [cmdletBinding()]
     param(
