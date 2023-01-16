@@ -333,9 +333,21 @@ $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
   Set-TaskSequenceListItems
 })
+$TSFCredentials = Get-NewTSItem "Credentials"
+$TSFCTestCredential = Get-NewTSItem "Test Credentials"
+$TSFCTestCredential.Add_Click({
+  #if (-Not (Get-Module CredentialManager)) { Import-Module $PSScriptRoot\CredentialManager.psm1 }
+  Test-StoredPSCredential
+})
+$TSFCChangeCredential = Get-NewTSItem "Change Credentials"
+$TSFCChangeCredential.Add_Click({
+  #if (-Not (Get-Module CredentialManager)) { Import-Module $PSScriptRoot\CredentialManager.psm1 }
+  New-StoredPScredential
+})
+$TSFCredentials.DropDownItems.AddRange(@($TSFCTestCredential, $TSFCChangeCredential))
 $TSFExitItem = Get-NewTSItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFCredentials, $TSFExitItem))
 
 $TSComputer  = Get-NewTSItem "Remote Computer"
 $TSCScanHost  = Get-NewTSItem "Scan Host"
@@ -425,7 +437,41 @@ $GCMNextDesignScheme.Add_Click({
   RefreshToolStrip -ToolStrip $ToolStrip
 })
 
-$GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme))
+$GCMRefreshModules = New-Object System.Windows.Forms.ToolStripMenuItem
+$GCMRefreshModules.Text = "Reload Modules"
+  $GCMRefreshModules.Add_Click({
+    if (Get-Module ConfigManager) { Remove-Module ConfigManager }
+    $ManualNameTextBox.Visible = $false
+    if (Get-Module Install_Software) { Remove-Module Install_Software }
+    $TaskSequencesList.Visible = $false
+    if (Get-Module InstallSoftware) { Remove-Module InstallSoftware }
+    $TaskSequencesListFilter.Visible = $false
+    if (Get-Module GUIManager) { Remove-Module GUIManager }
+    $ApplyToManualEntry.Visible = $false
+    if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
+    $InstallOnSelMachines.Visible = $false
+    if (Get-Module CredentialManager) { Remove-Module CredentialManager}
+    $ScanComputer.Visible = $false
+    if (Get-Module MDTManager) { Remove-Module MDTManager }
+    $SoftwareFilterTextBox.Visible = $false
+
+    Import-Module $PSScriptRoot\ConfigManager.psm1
+    $ManualNameTextBox.Visible = $true
+    Import-Module $PSScriptRoot\Install_Software.psm1
+    $TaskSequencesList.Visible = $true
+    Import-Module $PSScriptRoot\InstallSoftware.psm1
+    $TaskSequencesListFilter.Visible = $true
+    Import-Module $PSScriptRoot\GUIManager.psm1
+    $ApplyToManualEntry.Visible = $true
+    Import-Module $PSScriptRoot\ToolStripManager.psm1
+    $InstallOnSelMachines.Visible = $true
+    Import-Module $PSScriptRoot\CredentialManager.psm1
+    $ScanComputer.Visible = $true
+    Import-Module $PSScriptRoot\MDTManager.psm1
+    $SoftwareFilterTextBox.Visible = $true
+})
+
+$GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme, $GCMRefreshModules))
 
 $GUIForm.ContextMenuStrip = $GUIContextMenu
 
