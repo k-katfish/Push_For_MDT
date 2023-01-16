@@ -165,6 +165,42 @@ function Get-TaskSequenceIDFromName ($TaskSequenceName) {
     }
 }
 
+function Get-ApplicationData {
+    <#
+    .SYNOPSIS
+        Provided the name of an application on MDT, this will return an object with the Name, GUID, CommandLine, and Working Directory of the app
+    .DESCRIPTION
+        Pass one or more names to this function. It will look at the connected MDT share under Control\Applications.xml and read that file,
+        then it will find any applications which match the name(s) you provided. It will gather that data into a PSCustomObject as described in OUTPUTS.
+        Note: the returned WorkingDirectory will be modified to include the name of the MDT share. For example, if you have an application
+        who's working directory is .\Applications\My-App, the returned PS object will prepend the MDT share: \\[MDTServer]\[MDTShare]\Applications\My-App.
+        If the application's working directory is located on a different share (ex. \\MySoftwareServer\MySoftwareShare\Software\My-App) then the returned
+        working directory string will not be altered (ex. \\MySoftwareServer\MySoftwareShare\Software\My-App)
+    #>
+    [cmdletBinding()]
+    param(
+        [Parameter()]$Name
+    )
+
+    $ApplicationData = New-Object System.Collections.ArrayList
+
+    ForEach ($N in $Name) {
+        $App = $script:ControlApplicationsXML.applications.application | Where-Object {$_.Name -eq $N}
+        $ApplicationData.Add([PSCustomObject]@{
+            Name = $App.Name
+            guid = $App.guid
+            CommandLine = $App.CommandLine
+            WorkingDirectory = $App.WorkingDirectory
+        })
+    }
+
+    $ApplicationData | ForEach-Object {
+        if ($_.WorkingDirectory -like ".\*") {
+            $_.WorkingDirectory = "$(Get-DeploymentShareLocation)\$($_.WorkingDirectory.Substring(2))"
+        }
+    }
+}
+
 
 if (-Not (Get-Module ConfigManager)) { Import-Module $PSScriptRoot\ConfigManager.psm1 }
 if (Get-CachedMDTShareLocation) {
