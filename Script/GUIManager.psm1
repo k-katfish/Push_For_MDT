@@ -5,6 +5,9 @@
   Creation Date: 9/4
 #>
 
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
 if (-Not (Get-Module ConfigManager)) {Import-Module $PSScriptRoot\ConfigManager.psm1}
 
 function Invoke-RefreshColors ($Form) {

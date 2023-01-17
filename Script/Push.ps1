@@ -118,7 +118,7 @@ $OutputBox.TextAlign              = "Left"
 $OutputBox.WordWrap               = $false
 $OutputBox.ScrollBars             = "Vertical,Horizontal"
 
-$SelectGroup.Items.Add("All Machines") *> $null
+#$SelectGroup.Items.Add("All Machines") *> $null
 
 $TaskSequencesListFilter.Items.AddRange(@("Applications", "Task Sequences"))
 $TaskSequencesListFilter.SelectedIndex = 0
@@ -140,32 +140,40 @@ $TaskSequencesListFilter.Add_SelectedIndexChanged({
 
 function Set-GroupsListItems {
   $SelectGroup.Items.Clear()
-  Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
-    $GroupName = $_.Name.Substring(0,$_.Name.length-4)
-    $SelectGroup.Items.Add($GroupName) *> $null
+  if (Use-ADIntegration) {
+    Get-ADOUs | ForEach-Object {
+      $SelectGroup.Items.Add($_) *> $null
+    }
+  } else {
+    $SelectGroup.Items.Add("All Machines") *> $null
+    Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
+      $GroupName = $_.Name.Substring(0,$_.Name.length-4)
+      $SelectGroup.Items.Add($GroupName) *> $null
+    }
   }
 }
 Set-GroupsListItems
 
-if (Use-ADIntegration) {
-  Get-ADOUs | ForEach-Object {
-    $SelectGroup.Items.Add($_) *> $null
-  }
-}
-
 $SelectGroup.Add_SelectedIndexChanged({
   $SelectedGroup = $SelectGroup.SelectedItem
   $MachineList.Items.Clear()
-  if ($SelectedGroup -ne "All Machines") {
-    $GroupFileName = "$(Get-GroupsFolderLocation)\$SelectedGroup.txt"
-    Get-Content -Path $GroupFileName | ForEach-Object {
+  if (Use-ADIntegration) {
+    $Computers = Get-ADComputersInOU $SelectedGroup
+    $Computers | ForEach-Object {
       $MachineList.Items.Add($_) *> $null
     }
   } else {
-    Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
-      $Groupfilename = "$(Get-GroupsFolderLocation)\$_"
+    if ($SelectedGroup -ne "All Machines") {
+      $GroupFileName = "$(Get-GroupsFolderLocation)\$SelectedGroup.txt"
       Get-Content -Path $GroupFileName | ForEach-Object {
         $MachineList.Items.Add($_) *> $null
+      }
+    } else {
+      Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
+        $Groupfilename = "$(Get-GroupsFolderLocation)\$_"
+        Get-Content -Path $GroupFileName | ForEach-Object {
+          $MachineList.Items.Add($_) *> $null
+        }
       }
     }
   }
@@ -345,9 +353,10 @@ $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
   Set-TaskSequenceListItems
 })
-$TSFManageADIntegration = Get-NewTSItem "Integrate with AD"
+$TSFManageADIntegration = New-ToolStripItem "Integrate with AD"
 $TSFManageADIntegration.Add_Click({
   Set-ADIntegrationPreference -UseADIntegration $true -ExcludedOUs @()
+  Set-GroupsListItems
 })
 $TSFSetGroupsLocation = New-ToolStripItem "Set Groups Folder Location"
 $TSFSetGroupsLocation.Add_Click({ 
