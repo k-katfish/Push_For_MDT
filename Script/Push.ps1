@@ -58,7 +58,7 @@ Add-Type -AssemblyName System.Drawing
 
 $GUIForm                    = New-Object System.Windows.Forms.Form
 $GUIForm.ClientSize         = New-Object System.Drawing.Point(900,400)
-$GUIForm.Text               = "Push"
+$GUIForm.Text               = "Push  Connected to $(Get-DeploymentShareLocation)"
 $GUIForm.Icon               = "$PSScriptRoot\..\Media\Icon.ico"
 $GUIForm.StartPosition      = 'CenterScreen'
 $GUIForm.BackColor = Get-BackgroundColor
