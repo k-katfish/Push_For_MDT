@@ -31,6 +31,7 @@ if ($help) {
   exit
 }
 
+if (Get-Module ADIntegrationManager) { Remove-Module ADIntegrationManager }
 if (Get-Module ConfigManager) { Remove-Module ConfigManager }
 if (Get-Module Install_Software) { Remove-Module Install_Software }
 if (Get-Module InstallSoftware) { Remove-Module InstallSoftware }
@@ -39,6 +40,7 @@ if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
 if (Get-Module CredentialManager) { Remove-Module CredentialManager}
 if (Get-Module MDTManager) { Remove-Module MDTManager }
 
+Import-Module $PSScriptRoot\ADIntegrationManager.psm1
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\Install_Software.psm1
 Import-Module $PSScriptRoot\InstallSoftware.psm1
@@ -139,6 +141,12 @@ $TaskSequencesListFilter.Add_SelectedIndexChanged({
 Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
   $GroupName = $_.Name.Substring(0,$_.Name.length-4)
   $SelectGroup.Items.Add($GroupName) *> $null
+}
+
+if (Use-ADIntegration) {
+  Get-ADOUs | ForEach-Object {
+    $SelectGroup.Items.Add($_) *> $null
+  }
 }
 
 $SelectGroup.Add_SelectedIndexChanged({
@@ -333,9 +341,13 @@ $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
   Set-TaskSequenceListItems
 })
+$TSFManageADIntegration = Get-NewTSItem "Integrate with AD"
+$TSFManageADIntegration.Add_Click({
+  Set-ADIntegrationPreference -UseADIntegration $true -ExcludedOUs @()
+})
 $TSFExitItem = Get-NewTSItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFManageADIntegration, $TSFExitItem))
 
 $TSComputer  = Get-NewTSItem "Remote Computer"
 $TSCScanHost  = Get-NewTSItem "Scan Host"

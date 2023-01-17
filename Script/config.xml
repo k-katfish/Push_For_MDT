@@ -50,4 +50,5 @@
   <SelectedDesignScheme Name = "Modern"/>
   <GroupsFolder Location=""/>
   <DefaultMDTShare Location=""/>
+  <UseADIntegration Preference="No" ExcludedOUs=""/>
 </Configuration>
