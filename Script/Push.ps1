@@ -8,7 +8,7 @@
 .OUTPUTS
   A log file, optionally (enabled by default). You can disable the log file if you're running push in silent mode.
 .NOTES
-  Version:          2.1.1
+  Version:          2.1.1 # TODO: Get a new version number
   Authors:          Kyle Ketchell, Matt Smith
   Version Creation: November 7, 2022
   Orginal Creation: May 29, 2022
@@ -60,7 +60,7 @@ Add-Type -AssemblyName System.Drawing
 
 $GUIForm                    = New-Object System.Windows.Forms.Form
 $GUIForm.ClientSize         = New-Object System.Drawing.Point(900,400)
-$GUIForm.Text               = "Push"
+$GUIForm.Text               = "Push  Connected to $(Get-DeploymentShareLocation)"
 $GUIForm.Icon               = "$PSScriptRoot\..\Media\Icon.ico"
 $GUIForm.StartPosition      = 'CenterScreen'
 $GUIForm.BackColor = Get-BackgroundColor
@@ -138,10 +138,14 @@ $TaskSequencesListFilter.Add_SelectedIndexChanged({
   }
 })
 
-Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
-  $GroupName = $_.Name.Substring(0,$_.Name.length-4)
-  $SelectGroup.Items.Add($GroupName) *> $null
+function Set-GroupsListItems {
+  $SelectGroup.Items.Clear()
+  Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
+    $GroupName = $_.Name.Substring(0,$_.Name.length-4)
+    $SelectGroup.Items.Add($GroupName) *> $null
+  }
 }
+Set-GroupsListItems
 
 if (Use-ADIntegration) {
   Get-ADOUs | ForEach-Object {
@@ -333,10 +337,10 @@ $ToolStrip = New-Object System.Windows.Forms.MenuStrip
 $ToolStrip.BackColor = Get-ToolStripBackgroundColor
 $ToolStrip.ForeColor = Get-ForegroundColor
 
-$TSFile = Get-NewTSItem "File"
-$TSFUser = Get-NewTSItem "Launch Session Manager"
+$TSFile = New-ToolStripItem "File"
+$TSFUser = New-ToolStripItem "Launch Session Manager"
 $TSFUser.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1" <#-NoNewWindow#> -WindowStyle:Hidden })
-$TSFMDTShare = Get-NewTSItem "Connect to MDT Share"
+$TSFMDTShare = New-ToolStripItem "Connect to MDT Share"
 $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
   Set-TaskSequenceListItems
@@ -345,48 +349,53 @@ $TSFManageADIntegration = Get-NewTSItem "Integrate with AD"
 $TSFManageADIntegration.Add_Click({
   Set-ADIntegrationPreference -UseADIntegration $true -ExcludedOUs @()
 })
-$TSFExitItem = Get-NewTSItem "Exit"
+$TSFSetGroupsLocation = New-ToolStripItem "Set Groups Folder Location"
+$TSFSetGroupsLocation.Add_Click({ 
+  Invoke-ChangeGroupsFolderLocation 
+  Set-GroupsListItems
+})
+$TSFExitItem = New-ToolStripItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFManageADIntegration, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFSetGroupsLocation, $TSFManageADIntegration, $TSFExitItem))
 
-$TSComputer  = Get-NewTSItem "Remote Computer"
-$TSCScanHost  = Get-NewTSItem "Scan Host"
+$TSComputer  = New-ToolStripItem "Remote Computer"
+$TSCScanHost  = New-ToolStripItem "Scan Host"
 $TSCScanHost.Add_Click({ Invoke-TSManageComputer "scan" })
-$TSCFiles    = Get-NewTSItem "Files on C:\ Drive"
+$TSCFiles    = New-ToolStripItem "Files on C:\ Drive"
 $TSCFiles.Add_Click({ Invoke-TSManageComputer "explorer.exe" })
-$TSCLusr     = Get-NewTSItem "Users and Groups" 
+$TSCLusr     = New-ToolStripItem "Users and Groups" 
 $TSCLusr.Add_Click({ Invoke-TSManageComputer "lusrmgr.msc" })
-$TSCGPEdit   = Get-NewTSItem "Edit Group Policy"
+$TSCGPEdit   = New-ToolStripItem "Edit Group Policy"
 $TSCGPEdit.Add_Click({ Invoke-TSManageComputer "gpedit.msc" })
-$TSCGPUpdate = Get-NewTSItem "Force Group Policy Update"
+$TSCGPUpdate = New-ToolStripItem "Force Group Policy Update"
 $TSCGPUpdate.Add_Click({ Invoke-TSManageComputer "gpupdate" })
-$TSCGPolicy  = Get-NewTSItem "Manage Group Policy"
+$TSCGPolicy  = New-ToolStripItem "Manage Group Policy"
 $TSCGPolicy.DropDownItems.AddRange(@($TSCGPEdit,$TSCGPUpdate))
-#$TSCSessions = Get-NewTSItem "Manage User Sessions"              #   #   #  |
+#$TSCSessions = New-ToolStripItem "Manage User Sessions"              #   #   #  |
 #$TSCSessions.Add_Click({ Invoke-TSManageComputer "sessions" })   #   #   # do this if we click it
-$TSCManage   = Get-NewTSItem "Computer Manager"
+$TSCManage   = New-ToolStripItem "Computer Manager"
 $TSCManage.Add_Click({ Invoke-TSManageComputer "compmgmt.msc" })
-$TSCRestart  = Get-NewTSItem "Restart Computer"
+$TSCRestart  = New-ToolStripItem "Restart Computer"
 $TSCRestart.Add_Click({ Invoke-TSManageComputer "restart" })
-$TSCShutdown = Get-NewTSItem "Shutdown Computer"
+$TSCShutdown = New-ToolStripItem "Shutdown Computer"
 $TSCShutdown.Add_Click({ Invoke-TSManageComputer "shutdown" }) 
 $TSComputer.DropDownItems.AddRange(@($TSCScanHost, $TSCFiles, $TSCLusr, $TSCGPolicy, <#$TSCSessions,#> $TSCManage, $TSCRestart, $TSCShutdown))
 
-$TSHAbout    = Get-NewTSItem "About"
+$TSHAbout    = New-ToolStripItem "About"
 $TSHAbout.Add_Click({ Invoke-TSHelpReader "About.txt" })
-$TSHGroups   = Get-NewTSItem "Managing PUSH Groups"
+$TSHGroups   = New-ToolStripItem "Managing PUSH Groups"
 $TSHGroups.Add_Click({ Invoke-TSHelpReader "Groups.txt" })
-$TSHSoftware = Get-NewTSItem "Adding Software to PUSH"
+$TSHSoftware = New-ToolStripItem "Adding Software to PUSH"
 $TSHSoftware.Add_Click({ Invoke-TSHelpReader "Software.txt" })
-$TSHPatches  = Get-NewTSItem "Adding Fixes to Push"
+$TSHPatches  = New-ToolStripItem "Adding Fixes to Push"
 $TSHPatches.Add_Click({ Invoke-TSHelpReader "Scripts-Patches-Fixes.txt" })
-$TSHMessages = Get-NewTSItem "Creating a PopUp message for a software"
+$TSHMessages = New-ToolStripItem "Creating a PopUp message for a software"
 $TSHMessages.Add_Click({ Invoke-TSHelpReader "Messages_Install.txt" })
-$TSHRemote   = Get-NewTSItem "About Remote Computer Tools"
+$TSHRemote   = New-ToolStripItem "About Remote Computer Tools"
 $TSHRemote.Add_Click({ Invoke-TSHelpReader "Remote_Computer.txt" })
-#$TSHUseCSSP  = Get-NewTSItem "What is CredSSP?"
+#$TSHUseCSSP  = New-ToolStripItem "What is CredSSP?"
 #$TSHUseCSSP.Add_Click({ Invoke-TSHelpReader "UseCSSP.txt" })
-$TSHelp = Get-NewTSItem "Help"
+$TSHelp = New-ToolStripItem "Help"
 $TSHelp.DropDownItems.AddRange(@($TSHAbout, $TSHGroups, $TSHSoftware, $TSHPatches, $TSHMessages, $TSHRemote))
 
 $ToolStrip.Items.AddRange(@($TSFile,$TSComputer, $TSHelp))

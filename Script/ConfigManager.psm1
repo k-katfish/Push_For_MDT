@@ -18,6 +18,15 @@ function Get-GroupsFolderLocation {
   return $script:Config.Configuration.GroupsFolder.Location
 }
 
+function Invoke-ChangeGroupsFolderLocation {
+  if (-Not (Get-Module GUIManager)) { Import-Mode $PSScriptRoot\GUIManager.psm1 }
+  #Add-Type -AssemblyName Microsoft.VisualBasic
+  $GroupsFolderLocation = Get-GUIInput -Text "Where is your groups folder located?" -Title "Push"
+  if (-Not (Test-Path $GroupsFolderLocation)) { New-Item $GroupsFolderLocation -ItemType Directory }
+  $script:Config.Configuration.GroupsFolder.Location = $GroupsFolderLocation
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
+}
+
 function Get-CachedMDTShareLocation {
   return $script:Config.Configuration.DefaultMDTShare.Location
 }
