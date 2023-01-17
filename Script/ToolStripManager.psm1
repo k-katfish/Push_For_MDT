@@ -18,6 +18,13 @@ function Get-NewTSItem {
     return $NewTSItem
 }
 
+function New-ToolStripItem {
+    param($Text)
+    $NewTSItem = New-Object System.Windows.Forms.ToolStripMenuItem
+    Invoke-ConfigureTSItem $NewTSItem -Text $Text
+    return $NewTSItem
+}
+
 function RefreshToolStrip {
     param($ToolStrip)
  

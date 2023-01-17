@@ -176,3 +176,13 @@ function Get-FolderPathUI {
   $Null = $FolderBrowser.ShowDialog()
   return $FolderBrowser.SelectedPath
 }
+
+function Get-GUIInput {
+  param(
+    [String]$Text,
+    [String]$Title
+  )
+
+  Add-Type -AssemblyName Microsoft.VisualBasic
+  return ([Microsoft.VisualBasic.Interaction]::InputBox($Text, $Title))
+}
