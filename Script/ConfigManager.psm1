@@ -141,3 +141,39 @@ function Set-ConfigurationFile ($Configuration_File) {
   Write-Verbose "Caching Configuration data to $env:APPDATA\Push\config.xml"
   $script:Config.Save("$env:APPDATA\Push\config.xml")
 }
+
+function Get-ADIntegrationPreference {
+  $UseADIntegrationPreference = $false
+  if ($script:Config.Configuration.UseADIntegration.Preference -eq "Yes") {
+    $UseADIntegrationPreference = $true
+  }
+
+  $ExcludedOUs = $script:Config.Configuration.UseADIntegration.ExcludedOUs.Split(',')
+
+  return ([PSCustomObject]@{
+    UseIntegration = $UseADIntegrationPreference
+    ExcludedOUs = $ExcludedOUs
+  })
+}
+
+function Set-ADIntegrationPreference {
+  param(
+    $UseADIntegration,
+    $ExcludedOUs
+  )
+
+  if ($UseADIntegration -eq $true) {
+    $script:Config.Configuration.UseADIntegration.Preference = "Yes"
+  } else {
+    $script:Config.Configuration.UseADIntegration.Preference = "No"
+  }
+
+  $ExcludedOUsString = ""
+
+  $ExcludedOUs | ForEach-Object {
+    $ExcludedOUsString += "$_,"
+  }
+
+  $script:Config.Configuration.UseADIntegration.ExcludedOUs = $ExcludedOUsString
+  $script:Config.Save("$env:APPDATA\Push\config.xml")
+}

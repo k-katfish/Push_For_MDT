@@ -31,6 +31,7 @@ if ($help) {
   exit
 }
 
+if (Get-Module ADIntegrationManager) { Remove-Module ADIntegrationManager }
 if (Get-Module ConfigManager) { Remove-Module ConfigManager }
 if (Get-Module Install_Software) { Remove-Module Install_Software }
 if (Get-Module InstallSoftware) { Remove-Module InstallSoftware }
@@ -39,6 +40,7 @@ if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
 if (Get-Module CredentialManager) { Remove-Module CredentialManager}
 if (Get-Module MDTManager) { Remove-Module MDTManager }
 
+Import-Module $PSScriptRoot\ADIntegrationManager.psm1
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\Install_Software.psm1
 Import-Module $PSScriptRoot\InstallSoftware.psm1
@@ -116,7 +118,7 @@ $OutputBox.TextAlign              = "Left"
 $OutputBox.WordWrap               = $false
 $OutputBox.ScrollBars             = "Vertical,Horizontal"
 
-$SelectGroup.Items.Add("All Machines") *> $null
+#$SelectGroup.Items.Add("All Machines") *> $null
 
 $TaskSequencesListFilter.Items.AddRange(@("Applications", "Task Sequences"))
 $TaskSequencesListFilter.SelectedIndex = 0
@@ -138,9 +140,16 @@ $TaskSequencesListFilter.Add_SelectedIndexChanged({
 
 function Set-GroupsListItems {
   $SelectGroup.Items.Clear()
-  Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
-    $GroupName = $_.Name.Substring(0,$_.Name.length-4)
-    $SelectGroup.Items.Add($GroupName) *> $null
+  if (Use-ADIntegration) {
+    Get-ADOUs | ForEach-Object {
+      $SelectGroup.Items.Add($_) *> $null
+    }
+  } else {
+    $SelectGroup.Items.Add("All Machines") *> $null
+    Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
+      $GroupName = $_.Name.Substring(0,$_.Name.length-4)
+      $SelectGroup.Items.Add($GroupName) *> $null
+    }
   }
 }
 Set-GroupsListItems
@@ -148,16 +157,23 @@ Set-GroupsListItems
 $SelectGroup.Add_SelectedIndexChanged({
   $SelectedGroup = $SelectGroup.SelectedItem
   $MachineList.Items.Clear()
-  if ($SelectedGroup -ne "All Machines") {
-    $GroupFileName = "$(Get-GroupsFolderLocation)\$SelectedGroup.txt"
-    Get-Content -Path $GroupFileName | ForEach-Object {
+  if (Use-ADIntegration) {
+    $Computers = Get-ADComputersInOU $SelectedGroup
+    $Computers | ForEach-Object {
       $MachineList.Items.Add($_) *> $null
     }
   } else {
-    Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
-      $Groupfilename = "$(Get-GroupsFolderLocation)\$_"
+    if ($SelectedGroup -ne "All Machines") {
+      $GroupFileName = "$(Get-GroupsFolderLocation)\$SelectedGroup.txt"
       Get-Content -Path $GroupFileName | ForEach-Object {
         $MachineList.Items.Add($_) *> $null
+      }
+    } else {
+      Get-ChildItem -Path (Get-GroupsFolderLocation) | ForEach-Object {
+        $Groupfilename = "$(Get-GroupsFolderLocation)\$_"
+        Get-Content -Path $GroupFileName | ForEach-Object {
+          $MachineList.Items.Add($_) *> $null
+        }
       }
     }
   }
@@ -337,6 +353,11 @@ $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
   Set-TaskSequenceListItems
 })
+$TSFManageADIntegration = New-ToolStripItem "Integrate with AD"
+$TSFManageADIntegration.Add_Click({
+  Set-ADIntegrationPreference -UseADIntegration $true -ExcludedOUs @()
+  Set-GroupsListItems
+})
 $TSFSetGroupsLocation = New-ToolStripItem "Set Groups Folder Location"
 $TSFSetGroupsLocation.Add_Click({ 
   Invoke-ChangeGroupsFolderLocation 
@@ -344,7 +365,7 @@ $TSFSetGroupsLocation.Add_Click({
 })
 $TSFExitItem = New-ToolStripItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFSetGroupsLocation, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFSetGroupsLocation, $TSFManageADIntegration, $TSFExitItem))
 
 $TSComputer  = New-ToolStripItem "Remote Computer"
 $TSCScanHost  = New-ToolStripItem "Scan Host"
