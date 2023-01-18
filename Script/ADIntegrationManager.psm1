@@ -76,10 +76,25 @@ function Get-ExcludedOUs {
     return (Get-ADIntegrationPreference).ExcludedOUs
 }
 
+function Set-ExcludedOUs ($ExcludedOUs) {
+    #$ExcludedOUs = New-Object System.Collections.ArrayList
+    #$ExcludedOUs.AddRange((Get-ADIntegrationPreference).ExcludedOUs)
+    #$ExcludedOUs.Add($ExcludeThisOU)
+    Set-ADIntegrationPreference -UseADIntegration (Get-ADIntegrationPreference).UseIntegration -ExcludedOUs $ExcludedOUs
+}
+
 function Add-ExcludedOU ($ExcludeThisOU) {
     $ExcludedOUs = New-Object System.Collections.ArrayList
     $ExcludedOUs.AddRange((Get-ADIntegrationPreference).ExcludedOUs)
     $ExcludedOUs.Add($ExcludeThisOU)
+
+    Set-ADIntegrationPreference -UseADIntegration (Get-ADIntegrationPreference).UseIntegration -ExcludedOUs $ExcludedOUs
+}
+
+function Remove-ExcludedOU ($IncludeThisOU) {
+    $ExcludedOUs = New-Object System.Collections.ArrayList
+    $ExcludedOUs.AddRange((Get-ADIntegrationPreference).ExcludedOUs)
+    $ExcludedOUs.Remove($IncludeThisOU)
 
     Set-ADIntegrationPreference -UseADIntegration (Get-ADIntegrationPreference).UseIntegration -ExcludedOUs $ExcludedOUs
 }

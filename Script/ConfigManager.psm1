@@ -182,11 +182,7 @@ function Set-ADIntegrationPreference {
     $script:Config.Configuration.UseADIntegration.Preference = "No"
   }
 
-  $ExcludedOUsString = ""
-
-  $ExcludedOUs | ForEach-Object {
-    $ExcludedOUsString += "$_,"
-  }
+  $ExcludedOUsString = $ExcludedOUs -join ','
 
   $script:Config.Configuration.UseADIntegration.ExcludedOUs = $ExcludedOUsString
   $script:Config.Save("$env:APPDATA\Push\config.xml")
