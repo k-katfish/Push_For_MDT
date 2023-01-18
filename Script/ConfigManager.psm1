@@ -11,6 +11,19 @@ function LoadConfiguration {
   $script:Config = [XML](Get-Content "$env:APPDATA\Push\config.xml")
   $script:SelectedColorScheme = $script:Config.Configuration.SelectedColorScheme.Name
   $script:SelectedDesignScheme = $script:Config.Configuration.SelectedDesignScheme.Name
+
+  #try {
+    if (-Not ($script:Config.Configuration.UseADIntegration.Preference -eq "Yes" -or $script:Config.Configuration.UseADIntegration.Preference -eq "No")) {
+      $ConfigFile = Get-Content "$env:APPDATA\Push\config.xml"
+      $ConfigFile[$ConfigFile.Length-2] += "`r`n" + '<UseADIntegration Preference="No" ExcludedOUs=""/>' + "`r`n"
+      $ConfigFile | Set-Content -Path "$env:APPDATA\Push\config.xml"
+      $script:Config = [XML](Get-Content "$env:APPDATA\Push\config.xml")
+    }
+  #} catch {
+  #  $ConfigFile = Get-Content "$env:APPDATA\Push\config.xml"
+  #  $ConfigFile[$ConfigFile.Length-2] += "`r`n" + '<UseADIntegration Preference="No" ExcludedOUs=""/>' + "`r`n"
+  #  $ConfigFile | Set-Content -Path "$env:APPDATA\Push\config.xml"
+  #}
 }
 LoadConfiguration
 
@@ -144,6 +157,7 @@ function Set-ConfigurationFile ($Configuration_File) {
 
 function Get-ADIntegrationPreference {
   $UseADIntegrationPreference = $false
+
   if ($script:Config.Configuration.UseADIntegration.Preference -eq "Yes") {
     $UseADIntegrationPreference = $true
   }
