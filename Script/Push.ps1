@@ -84,7 +84,7 @@ $OfflineIcon = New-PictureBox -Location (881, 75) -Image "$PSScriptRoot\..\Media
 $OfflineIcon.Visible = $false
 
 $ApplyToManualEntry   = New-Button -Text "Install Now" -Location (625,100) -Size (256,25)
-$EnterPS              = New-Button -Text "Enter PSSession" -Location (625,125) -Size (256,25)
+$StartRD              = New-Button -Text "Remote Desktop" -Location (625,125) -Size (256,25)
 $ScanComputer         = New-Button -Text "Scan Computer" -Location (625,150) -Size (256,25)
 
 #$TSListFilterLabel       = New-Label -Text "Show: " -Location (275, 25)
@@ -103,7 +103,7 @@ $GUIForm.Controls.AddRange(@(
   $SelectAll, $SelectNone, $MachineList, $InstallOnSelMachines,
   $ManualSectionHeader, $OrLabel, $ManualNameTextBox,
   $LoadingIcon, $OKIcon, $OfflineIcon,
-  $ApplyToManualEntry, $EnterPS, $ScanComputer,
+  $ApplyToManualEntry, $StartRD, $ScanComputer,
   $TaskSequencesListFilter,
   $TaskSequencesList, $FixesCheckBox,
   $SoftwareFilterTextBox, $ShowHiddenCheckbox,
@@ -281,10 +281,17 @@ $ApplyToManualEntry.Add_Click({
   }
 })
 
-$EnterPS.Add_Click({
+$StartRD.Add_Click({
   $name = $ManualNameTextBox.text
-  Start-Process powershell -ArgumentList "-NoExit","Enter-PSSession",$name
+  Start-Process mstsc.exe -ArgumentList "/v:$name"
 })
+
+$StartRDContextMenu = New-Object System.Windows.Forms.ContextMenuStrip
+$LaunchSM = New-Object System.Windows.Forms.ToolStripMenuItem
+$LaunchSM.Text = "Launch Session Manager"
+$LaunchSM.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1 -C $($ManualNameTextBox.text)" <#-NoNewWindow#> -WindowStyle:Hidden })
+$StartRDContextMenu.Items.Add($LaunchSM)
+$StartRD.ContextMenuStrip = $StartRDContextMenu
 
 $ScanComputer.Add_Click({
   $OutputBox.AppendText("Scanning")
