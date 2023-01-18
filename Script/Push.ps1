@@ -52,18 +52,18 @@ Import-Module $PSScriptRoot\MDTManager.psm1
 if ($Configuration_File) { Set-ConfigurationFile $Configuration_File }
 if ($Credential) { Set-StoredPSCredential $Credential }
 
-#$Config = Get-PUSH_Configuration $Configure -ColorScheme $ColorScheme -Design $DesignScheme -Application "PUSH"
-
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+#Add-Type -AssemblyName System.Windows.Forms
+#Add-Type -AssemblyName System.Drawing
 #[System.Windows.Forms.Application]::EnableVisualStyles() # maybe this is a color thing?
 
-$GUIForm                    = New-Object System.Windows.Forms.Form
-$GUIForm.ClientSize         = New-Object System.Drawing.Point(900,400)
-$GUIForm.Text               = "Push  Connected to $(Get-DeploymentShareLocation)"
-$GUIForm.Icon               = "$PSScriptRoot\..\Media\Icon.ico"
-$GUIForm.StartPosition      = 'CenterScreen'
-$GUIForm.BackColor = Get-BackgroundColor
+#$GUIForm                    = New-Object System.Windows.Forms.Form
+#$GUIForm.ClientSize         = New-Object System.Drawing.Point(900,400)
+#$GUIForm.Text               = "Push  Connected to $(Get-DeploymentShareLocation)"
+#$GUIForm.Icon               = "$PSScriptRoot\..\Media\Icon.ico"
+#$GUIForm.StartPosition      = 'CenterScreen'
+#$GUIForm.BackColor          = Get-BackgroundColor
+
+$GUIForm              = New-WinForm -Text "Push  Connected to $(Get-DeploymentShareLocation)" -Size (900, 400) -Icon "$PSScriptRoot\..\Media\Icon.ico"
 
 $SelectGroup          = New-ComboBox -Text "Select Group..." -Location (16,25) -Size (256, 23)
 
@@ -258,9 +258,15 @@ $OfflineIcon.Add_Click({
 #[System.Windows.Forms.ToolTip]::SetToolTip($OfflineIcon, "Is the computer online?")
 
 $ManualNameTextBox.Add_TextChanged({
-  $OKIcon.Visible = $false
-  $OfflineIcon.Visible = $false
-  $LoadingIcon.Visible = $true
+  if ($ManualNameTextBox.Text.Length -le 2) {
+    $OKIcon.Visible = $false
+    $OfflineIcon.Visible = $false
+    $LoadingIcon.Visible = $false
+  } else {
+    $OKIcon.Visible = $false
+    $OfflineIcon.Visible = $false
+    $LoadingIcon.Visible = $true
+  }
 })
 
 $ApplyToManualEntry.Add_Click({
@@ -346,15 +352,13 @@ $DoneLabel.Forecolor = Get-SuccessColor
 $DoneLabel.visible   = $false
 $DoneLabel.BringToFront()
 
-
-
 $ToolStrip = New-Object System.Windows.Forms.MenuStrip
 $ToolStrip.BackColor = Get-ToolStripBackgroundColor
 $ToolStrip.ForeColor = Get-ForegroundColor
 
 $TSFile = New-ToolStripItem "File"
 $TSFUser = New-ToolStripItem "Launch Session Manager"
-$TSFUser.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1" <#-NoNewWindow#> -WindowStyle:Hidden })
+$TSFUser.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1" <#-NoNewWindow#> -WindowStyle:Hidden -Wait; })
 $TSFMDTShare = New-ToolStripItem "Connect to MDT Share"
 $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
@@ -370,9 +374,16 @@ $TSFSetGroupsLocation.Add_Click({
   Invoke-ChangeGroupsFolderLocation 
   Set-GroupsListItems
 })
+$TSFCustomizePush = New-ToolStripItem "Settings / Preferences"
+$TSFCustomizePush.Add_Click({ 
+  Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\ManagePushConfiguration.ps1" -WindowStyle Hidden #| Get-Process | Wait-Process
+  #Set-TaskSequenceListItems
+  #Set-GroupsListItems
+})
+$TSFCustomizePush.DropDownItems.AddRange(@($TSFMDTShare, $TSFManageADIntegration, $TSFSetGroupsLocation))
 $TSFExitItem = New-ToolStripItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFMDTShare, $TSFSetGroupsLocation, $TSFManageADIntegration, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFCustomizePush, $TSFExitItem))
 
 $TSComputer  = New-ToolStripItem "Remote Computer"
 $TSCScanHost  = New-ToolStripItem "Scan Host"
