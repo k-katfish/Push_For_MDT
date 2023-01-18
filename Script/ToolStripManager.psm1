@@ -10,13 +10,6 @@ function Invoke-ConfigureTSItem {
         Invoke-ConfigureTSItem $_ $_.Text.SubString(1)
     }
 }
-  
-function Get-NewTSItem {
-    param($Text)
-    $NewTSItem = New-Object System.Windows.Forms.ToolStripMenuItem
-    Invoke-ConfigureTSItem $NewTSItem -Text $Text
-    return $NewTSItem
-}
 
 function New-ToolStripItem {
     param($Text)
@@ -37,12 +30,9 @@ function RefreshToolStrip {
 }
   
 function Invoke-TSManageComputer ($ManageComponent) {
-    $InputForm               = New-Object System.Windows.Forms.Form
-    $InputForm.ClientSize    = New-Object System.Drawing.Size(250,125)
-    $InputForm.text          = "$ManageComponent"
-    $InputForm.TopMost       = $true
-    $InputForm.StartPosition = 'CenterScreen'
-    $InputForm.BackColor     = Get-BackgroundColor
+    if (-Not (Get-Module GUIManager)) { Import-Module $PSScriptRoot\GUIManager.psm1}
+
+    $InputForm = New-WinForm -Text "$ManageComponent" -Size (250, 125)
     $HostnameLabel = New-Label -Text "Enter Computer name:" -Location (10, 20)
     $InputBox = New-TextBox -Location (10, 50) -Size (200, 23)
     $OKButton = New-Button -Text "GO" -Location (10, 80) -Size (50, 23)
@@ -50,14 +40,14 @@ function Invoke-TSManageComputer ($ManageComponent) {
       $TSManageComputerName = $InputBox.Text
       $InputForm.Close()
       switch ($ManageComponent) {
-        "scan" { Start-Process powershell -ArgumentList "Powershell $PSScriptRoot\Scan_Host.ps1 -Hostname $TSManageComputerName" -WindowStyle:Hidden}
+        "scan" { Start-Process powershell -ArgumentList "Powershell $PSScriptRoot\Scan_Host.ps1 -Hostname $($InputBox.Text)" -WindowStyle:Hidden}
         "explorer.exe" { Start-Process \\$TSManageComputerName\c$ }
-        "lusrmgr.msc" { Start-Process Powershell -ArgumentList "Powershell lusrmgr.msc /computer:$TSManageComputerName" -NoNewWindow }
-        "gpedit.msc" { Start-Process Powershell -ArgumentList "Powershell gpedit.msc /gpcomputer: $TSManageComputerName" -NoNewWindow }
-        "gpupdate" { Start-Process Powershell -ArgumentList "Powershell Invoke-Command -ScriptBlock { gpupdate /force } -ComputerName $TSManageComputerName" -NoNewWindow }
-        "compmgmt.msc" { Start-Process Powershell -ArgumentList "Powershell compmgmt.msc /computer:$TSManageComputerName" -NoNewWindow }
-        "restart" { Restart-Computer -ComputerName $TSManageComputerName -Credential $(Get-Credential -Message "Please provide credentials to Restart this Computer." -Username "$env:USERDOMAIN\$env:USERNAME") -Force }
-        "shutdown" { Stop-Computer -ComputerName $TSManageComputerName -Credential $(Get-Credential -Message "Please provide credentials to Shut Down this Computer." -Username "$env:USERDOMAIN\$env:USERNAME") -Force }
+        "lusrmgr.msc" { Start-Process Powershell -ArgumentList "Powershell lusrmgr.msc /computer:$($InputBox.Text)" -NoNewWindow }
+        "gpedit.msc" { Start-Process Powershell -ArgumentList "Powershell gpedit.msc /gpcomputer: $($InputBox.Text)" -NoNewWindow }
+        "gpupdate" { Start-Process Powershell -ArgumentList "Powershell Invoke-Command -ScriptBlock { gpupdate /force } -ComputerName $($InputBox.Text)" -NoNewWindow }
+        "compmgmt.msc" { Start-Process Powershell -ArgumentList "Powershell compmgmt.msc /computer:$($InputBox.Text)" -NoNewWindow }
+        "restart" { Restart-Computer -ComputerName $($InputBox.Text) -Credential (Get-StoredPSCredential) <#$(Get-Credential -Message "Please provide credentials to Restart this Computer." -Username "$env:USERDOMAIN\$env:USERNAME")#> -Force }
+        "shutdown" { Stop-Computer -ComputerName $($InputBox.Text) -Credential (Get-StoredPSCredential) <#$(Get-Credential -Message "Please provide credentials to Shut Down this Computer." -Username "$env:USERDOMAIN\$env:USERNAME")#> -Force }
       }
     })
     $InputBox.Add_KeyDown({ if ($PSItem.KeyCode -eq "Enter") { $OKButton.PerformClick() }})
@@ -68,23 +58,13 @@ function Invoke-TSManageComputer ($ManageComponent) {
 }
   
 function Invoke-TSHelpReader ($HelpOption) {
-    $HelpForm               = New-Object System.Windows.Forms.Form
-    $HelpForm.text          = "Push Help"
-    $HelpForm.AutoSize      = $true
-    $HelpForm.TopMost       = $true
-    $HelpForm.StartPosition = 'CenterScreen'
-    $HelpForm.BackColor     = $script:PushConfiguration.ColorScheme.Background
-    $HelpForm.Icon          = Convert-Path($Config.Design.Icon)
-    $HelpText            = New-Object System.Windows.Forms.TextBox
-    $HelpText.Location   = New-Object System.Drawing.Point(0,0)
-    $HelpText.Size       = New-Object System.Drawing.Size(700,300)
-    $HelpText.Font       = New-Object System.Drawing.Font($script:PushConfiguration.Design.FontName, $script:PushConfiguration.Design.FontSize)
-    $HelpText.ForeColor  = $script:PushConfiguration.ColorScheme.Foreground
-    $HelpText.BackColor  = $script:PushConfiguration.ColorScheme.Background
+    if (-Not (Get-Module GUIManager)) { Import-Module $PSScriptRoot\GUIManager.psm1}
+    $HelpForm = New-WinForm -Text "Push Help" -AutoSize $true
+    $HelpText = New-TextBox -Location (0, 0) -Size (700, 300)
     $HelpText.ReadOnly   = $true
     $HelpText.MultiLine  = $true
     $HelpText.ScrollBars = 'Vertical'
-    Get-Content "$($script:PushConfiguration.Location.Documentation)\$HelpOption" | ForEach-Object {
+    Get-Content "$PSScriptRoot\..\Documentation\$HelpOption" | ForEach-Object {
       $HelpText.AppendText("$_`r`n")
     }
     $HelpForm.Controls.Add($HelpText)

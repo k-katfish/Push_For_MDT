@@ -3,20 +3,20 @@
   Script to remotely view, manage, and end user sessions on a remote Windows 10 computer. For which you are an administrator (duh).
 .DESCRIPTION
   This script will scan a host and find any logged on users. You can then select user sessions to shadow or end. Alternativly, scan one or more hosts for a particular user by searching through the resutls of an AD querey.
-.PARAMETER c, computer
-  Required: Provide a computer name to scan for
+.PARAMETER ComputerName
+  [Optional] Provide a computer name to scan for
 .NOTES
-  Version:       1.5
+  Version:       1.6
   Author:        Kyle Ketchell
   Creation Date: 6/21/22
 .EXAMPLE
   .\SessionManager.ps1
 .EXAMPLE
-  .\SessionManager.ps1 -s -c MyOfficeComputer
+  .\SessionManager.ps1 -ComputerName MyOfficeComputer
 #>
 [cmdletBinding()]
 param(
-  [Alias("C")][String]$Computer
+  [String]$ComputerName
 )
 
 #######################################################################################
@@ -28,13 +28,15 @@ param(
 #         6/21/2022                                                                   #
 #######################################################################################
 
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+#Add-Type -AssemblyName System.Windows.Forms
+#Add-Type -AssemblyName System.Drawing
 
+if (Get-Module ADIntegrationManager) { Remove-Module ADIntegrationManager }
 if (Get-Module ConfigManager) { Remove-Module ConfigManager }
 if (Get-Module SessionManager) { Remove-Module SessionManager}
 if (Get-Module GUIManager) { Remove-Module GUIManager }
 
+Import-Module $PSScriptRoot\ADIntegrationManager.psm1
 Import-Module $PSScriptRoot\ConfigManager.psm1
 Import-Module $PSScriptRoot\SessionManager.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
@@ -42,14 +44,16 @@ Import-Module $PSScriptRoot\GUIManager.psm1
 $global:Sessions = ""
 
 function Main {
-  $SessionManagerForm               = New-Object System.Windows.Forms.Form
-  $SessionManagerForm.Text          = "Session Manager"
-  $SessionManagerForm.Size          = New-Object System.Drawing.Size(600,400)
-  $SessionManagerForm.StartPosition = 'CenterScreen'
-  $SessionManagerForm.BackColor     = Get-BackgroundColor
-  $SessionManagerForm.ForeColor     = Get-ForegroundColor
-  #$SessionManagerForm.Icon          = $Config.Design.Icon                             #
-  $SessionManagerForm.Font          = Get-FontSettings
+#  $SessionManagerForm               = New-Object System.Windows.Forms.Form
+#  $SessionManagerForm.Text          = "Session Manager"
+#  $SessionManagerForm.Size          = New-Object System.Drawing.Size(600,400)
+#  $SessionManagerForm.StartPosition = 'CenterScreen'
+#  $SessionManagerForm.BackColor     = Get-BackgroundColor
+#  $SessionManagerForm.ForeColor     = Get-ForegroundColor
+  #$SessionManagerForm.Icon          = $Config.Design.Icon
+#  $SessionManagerForm.Font          = Get-FontSettings
+
+  $SessionManagerForm = New-WinForm -Text "Session Manager $ComputerName" -Size (600, 400) -Icon $PSScriptRoot\..\Media\session_manager_icon.ico
 
   $FindLabel = New-Label -Text "Find:" -Location (10, 10)
   $FindDropdown = New-ComboBox -Location (50, 10) -Size (300, 23)
@@ -58,10 +62,10 @@ function Main {
     "[Some user] on [some computer]",
     "[Some User] on a PUSH group of computers",
     "All Users on a PUSH group of Computers"
-#    "[Some User] on an AD group of computers",                                        #
-#    "All users on an AD group of computers"))                                         #
-  ))
-#  if ($Computer) { $FindDropdown.SelectedIndex = 0 }                                  #
+    "[Some User] on an AD group of computers",          
+    "All users on an AD group of computers"))           
+#  ))
+#  if ($Computer) { $FindDropdown.SelectedIndex = 0 }    
 
   $HostnameLabel = New-Label -Text "Computer: " -Location (10, 35)
   $HostnameBox = New-TextBox -Location (85, 35) -Size (200, 23)
@@ -152,40 +156,40 @@ function Main {
           $GroupBox.Items.Add($_.Name.SubString(0, $_.Name.length-4))
         }
       }
-      <#"[Some User] on an AD group of computers"{                                      # Some user on an AD Group:
-        $HostnameBox.BackColor = Get-ForegroundColor                              #
-        $HostnameBox.ForeColor = Get-BackgroundColor                              #
-        $HostnameBox.Enabled   = $false                                               #    Disable the hostname box
-        $UsernameBox.BackColor = Get-BackgroundColor                              #
-        $UsernameBox.ForeColor = Get-ForegroundColor                              #
-        $UsernameBox.Enabled   = $true                                                #    Enable the username box
-        $GroupBox.BackColor    = Get-BackgroundColor                              #
-        $GroupBox.ForeColor    = Get-ForegroundColor                              #
-        $GroupBox.Enabled      = $true                                                #    Enable the groups dropdown
-        $GroupLabel.Text = "AD Group:"                                                #    Set the group label to "AD Group:"
-        $GroupBox.Items.Clear()                                                       #    Clear the groups dropdown
+      "[Some User] on an AD group of computers"{
+        $HostnameBox.BackColor = Get-ForegroundColor
+        $HostnameBox.ForeColor = Get-BackgroundColor
+        $HostnameBox.Enabled   = $false
+        $UsernameBox.BackColor = Get-BackgroundColor
+        $UsernameBox.ForeColor = Get-ForegroundColor
+        $UsernameBox.Enabled   = $true
+        $GroupBox.BackColor    = Get-BackgroundColor
+        $GroupBox.ForeColor    = Get-ForegroundColor
+        $GroupBox.Enabled      = $true
+        $GroupLabel.Text = "AD Group:"
+        $GroupBox.Items.Clear()
         $GroupBox.Text = ""
-        $Config.Preferences.AD_Preferences.OUs.OU | ForEach-Object {                  #    Get the OUs from the Config object (draws from the configuration file)
-          $GroupBox.Items.Add($_.Name)                                                #    add the name of the OU to the group box
-        }                                                                             #
-      }                                                                               #
-      "All users on an AD group of computers" {                                       # All users on an AD Group:
-        $HostnameBox.BackColor = Get-ForegroundColor                              #
-        $HostnameBox.ForeColor = Get-BackgroundColor                              #
-        $HostnameBox.Enabled   = $false                                               #    Disable the hostname box
-        $UsernameBox.BackColor = Get-ForegroundColor                              #
-        $UsernameBox.ForeColor = Get-BackgroundColor                              #
-        $UsernameBox.Enabled   = $false                                               #    Disable the username box
-        $GroupBox.BackColor    = Get-BackgroundColor                              #
-        $GroupBox.ForeColor    = Get-ForegroundColor                              #
-        $GroupBox.Enabled      = $true                                                #    Enable the Group box
-        $GroupLabel.Text = "AD Group:"                                                #    Set the group label to "AD Group:"
-        $GroupBox.Items.Clear()                                                       #    Clear out the group box dropdown
-        $GroupBox.Text = ""                                                           #
-        $Config.Preferences.AD_Preferences.OUs.OU | ForEach-Object {
-          $GroupBox.Items.Add($_.Name)
+        Get-ADOUs | ForEach-Object {
+          $GroupBox.Items.Add($_)
         }
-      }#>
+      }                                                 
+      "All users on an AD group of computers" {
+        $HostnameBox.BackColor = Get-ForegroundColor
+        $HostnameBox.ForeColor = Get-BackgroundColor
+        $HostnameBox.Enabled   = $false
+        $UsernameBox.BackColor = Get-ForegroundColor
+        $UsernameBox.ForeColor = Get-BackgroundColor
+        $UsernameBox.Enabled   = $false
+        $GroupBox.BackColor    = Get-BackgroundColor
+        $GroupBox.ForeColor    = Get-ForegroundColor
+        $GroupBox.Enabled      = $true
+        $GroupLabel.Text = "AD Group:"
+        $GroupBox.Items.Clear()
+        $GroupBox.Text = ""                             
+        Get-ADOUs | ForEach-Object {
+          $GroupBox.Items.Add($_)
+        }
+      }
     }
   })
 
@@ -237,10 +241,9 @@ function Main {
         }
         $CountLabel.Text = "Count: $($ResultList.Items.Count)"
       }
-      <#"[Some User] on an AD group of computers" {
+      "[Some User] on an AD group of computers" {
         $Username = $UsernameBox.Text
-        $ADQuery = $Config.Preferences.AD_Preferences.OUs.OU | Where-Object { $_.Name -eq $GroupBox.SelectedItem } | Select-Object -ExpandProperty AD_Query
-        $global:Sessions = Get-ADComputer -Filter * -SearchBase $ADQuery | Get-Quser | Where-Object { $_.Username -eq $Username }
+        $global:Sessions = Get-ADComputer -Filter * -SearchBase $(Get-OUFromDNString $GroupBox.SelectedItem) | Get-Quser | Where-Object { $_.Username -eq $Username }
         $global:Sessions | ForEach-Object {
           if (-Not $_.Server -and -Not $_.Username) { }
           else { $ResultList.Items.Add("$($_.Server) : $($_.Username)") }
@@ -248,14 +251,13 @@ function Main {
         $CountLabel.Text = "Count: $($ResultList.Items.Count)"
       }
       "All users on an AD group of computers" {
-        $ADQuery = $Config.Preferences.AD_Preferences.OUs.OU | Where-Object { $_.Name -eq $GroupBox.SelectedItem } | Select-Object -ExpandProperty AD_Query
-        $global:Sessions = Get-ADComputer -Filter * -SearchBase $ADQuery | ForEach-Object { $_ | Get-Quser } # -WarningAction SilentlyContinue  #
+        $global:Sessions = Get-ADComputer -Filter * -SearchBase $(Get-OUFromDNString $GroupBox.SelectedItem) | ForEach-Object { $_ | Get-Quser } # -WarningAction SilentlyContinue  #
         $global:Sessions | ForEach-Object {
           if (-Not $_.Server -and -Not $_.Username) { }
           else { $ResultList.Items.Add("$($_.Server) : $($_.Username)") }
         }
         $CountLabel.Text = "Count: $($ResultList.Items.Count)"
-      }#>
+      }
     }
   })
   
@@ -311,9 +313,9 @@ function Main {
     $FindButton.PerformClick()
   })
 
-  if ($Computer) {
+  if ($ComputerName) {
     $FindDropdown.SelectedIndex = 0
-    $HostnameBox.Text = $Computer
+    $HostnameBox.Text = $ComputerName
     $Hostname = $HostnameBox.Text
     $global:Sessions = Get-Quser -ServerName $Hostname
     $global:Sessions | ForEach-Object {
@@ -327,13 +329,7 @@ function Main {
 
 function ShadowForm {
   param($Session)
-  $shadow_form = New-Object System.Windows.Forms.Form
-  $shadow_form.Text = 'Shadow User Session'
-  $shadow_form.Size = New-Object System.Drawing.Size(300,200)
-  $shadow_form.StartPosition = 'CenterScreen'
-  $shadow_form.TopMost = $true
-  $shadow_form.BackColor = Get-BackgroundColor
-  $shadow_form.ForeColor = Get-ForegroundColor
+  $shadow_form = New-WinForm -Text "Shadow: $($Session.Name)" -Size (300,200)
 
   $mstscControlFlag = New-Checkbox -Text "Control" -Location (10, 20) -Size (250,23)
   $mstscPromptFlag = New-Checkbox -Text "Connect as other user" -Location (10, 66) -Size (250, 23)
