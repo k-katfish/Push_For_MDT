@@ -414,7 +414,9 @@ $TSHRemote.Add_Click({ Invoke-TSHelpReader "Remote_Computer.txt" })
 $TSHelp = New-ToolStripItem "Help"
 $TSHelp.DropDownItems.AddRange(@($TSHAbout, $TSHGroups, $TSHSoftware, $TSHPatches, $TSHMessages, $TSHRemote))
 
-$ToolStrip.Items.AddRange(@($TSFile,$TSComputer, $TSHelp))
+# I took out the $TSHelp option because all of that documentation is outdated and incorrect for Push for MDT.
+
+$ToolStrip.Items.AddRange(@($TSFile,$TSComputer))
 
 #$ToolStrip.Items.Item($ToolSTrip.GetItemAt(5, 2)).DropDownItems.Add($TSFExitItem)
 
