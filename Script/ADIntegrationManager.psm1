@@ -1,10 +1,10 @@
 if (-Not (Get-Module ConfigManager)) { Import-Module $PSScriptRoot\ConfigManager.psm1 }
 
-$script:ADPreference = Get-ADIntegrationPreference
+#$script:ADPreference = Get-ADIntegrationPreference
 
 function Use-ADIntegration {
     #$ADPreference = Get-ADIntegrationPreference
-    return $script:ADPreference.UseIntegration
+    return (Get-ADIntegrationPreference).UseIntegration
 }
 
 function Convert-DNToString ($DistinguishedName) {
@@ -56,7 +56,7 @@ function Get-ADOUs {
 
         $OU_DNString = Convert-DNToString $_.DistinguishedName
 
-        if ($script:ADPreference.ExcludedOUs -contains $OU_DNString) {} 
+        if ((Get-ADIntegrationPreference).ExcludedOUs -contains $OU_DNString) {} 
         else { $OUs.Add($OU_DNString) *> $null }
     }
     return $OUs
@@ -73,13 +73,13 @@ function Get-ADComputersInOU ($CleanOUDNString) {
 }
 
 function Get-ExcludedOUs {
-    return $script:ADPreference.ExcludedOUs
+    return (Get-ADIntegrationPreference).ExcludedOUs
 }
 
 function Add-ExcludedOU ($ExcludeThisOU) {
     $ExcludedOUs = New-Object System.Collections.ArrayList
-    $ExcludedOUs.AddRange($script:ADPreference.ExcludedOUs)
+    $ExcludedOUs.AddRange((Get-ADIntegrationPreference).ExcludedOUs)
     $ExcludedOUs.Add($ExcludeThisOU)
 
-    Set-ADIntegrationPreference -UseADIntegration $script:ADPreference.UseIntegration -ExcludedOUs $ExcludedOUs
+    Set-ADIntegrationPreference -UseADIntegration (Get-ADIntegrationPreference).UseIntegration -ExcludedOUs $ExcludedOUs
 }
