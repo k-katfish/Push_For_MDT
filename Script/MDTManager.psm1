@@ -219,6 +219,8 @@ function Get-ApplicationData {
             $_.WorkingDirectory = "$(Get-DeploymentShareLocation)\$($_.WorkingDirectory.Substring(2))"
         }
     }
+
+    return $ApplicationData
 }
 
 
