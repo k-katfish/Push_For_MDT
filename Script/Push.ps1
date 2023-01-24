@@ -198,10 +198,14 @@ $InstallOnSelMachines.Add_Click({
   if ($CredentialObject -eq -1) {
     return
   }
-  $ListSelectedMachines = $MachineList.SelectedItems
-  $ListSelectedSoftware = $TaskSequencesList.SelectedItems
-  Write-Verbose "Installing $ListSelectedSoftware on $ListSelectedMachines"
-  Invoke-Install -Machines $ListSelectedMachines -Installers $ListSelectedSoftware -Credential $CredentialObject -Config $Config
+
+  if ($ApplyToManualEntry.Text -eq "Install Selected Apps") {
+    Write-Verbose "Calling Invoke-InstallSoftware for Applications: $($TaskSequencesList.SelectedItems) on computers: $($MachineList.SelectedItems)"
+    Invoke-InstallSoftware -ComputerName $MachineList.SelectedItems -ApplicationName $TaskSequencesList.SelectedItems -Credential $CredentialObject
+  } elseif ($ApplyToManualEntry.Text -eq "Run Task Sequence") {
+    Write-Verbose "Planning to launch TS: $($TaskSequencesList.SelectedItem) on $($MachineList.SelectedItems)"
+    Invoke-RunTaskSequence -ComputerName $MachineList.SelectedItems -TaskSequence $TaskSequencesList.SelectedItem -Credential $CredentialObject
+  }
 })
 
 $ManualNameTextBox.Add_KeyDown({
