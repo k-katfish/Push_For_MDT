@@ -247,9 +247,9 @@ function Invoke-InstallSoftware {
         $ComputerName = $CimSession.ComputerName
     }
     
-    Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
-        commandline = "powershell.exe /c Enable-PSRemoting -SkipNetworkProfileCheck -Force"
-    }
+    #Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+    #    commandline = "powershell.exe /c Enable-PSRemoting -SkipNetworkProfileCheck -Force"
+    #}
 
     <#Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
         commandline="powershell.exe /c Enable-WSManCredSSP -Role Server -Force"
@@ -278,10 +278,10 @@ function Invoke-InstallSoftware {
     #Invoke-Command -ComputerName $ComputerName -ScriptBlock {          
     #    Start-Process powershell.exe -ArgumentList "Enable-WSManCredSSP","Server","-Force"
     #}  -Authentication Kerberos
-    Write-Verbose "Creating a new powershell session with $ComputerName as $($Credential.Username)"
-    $Session = New-PSSession -ComputerName $ComputerName -Credential $Credential #-Authentication Credssp
+    #Write-Verbose "Creating a new powershell session with $ComputerName as $($Credential.Username)"
+    #$Session = New-PSSession -ComputerName $ComputerName -Credential $Credential #-Authentication Credssp
 
-    try{
+    <#try{
         Invoke-Command -Session $Session -ScriptBlock {
             Set-ExecutionPolicy Bypass -Scope Process -Force
         }
@@ -303,7 +303,9 @@ function Invoke-InstallSoftware {
         Write-Verbose "Attempting to install $($_.Name) on $($Session.ComputerName) using cmd: $($_.CommandLine) and dir: $($_.WorkingDirectory) as: $($Credential.UserName)"
         $App = $_
         Write-Verbose "Appd: $($App.Name) $($App.WorkingDirectory) $($App.CommandLine)"
-        Invoke-Command -Session $Session -ScriptBlock {
+        $Command = "pushd $($_.WorkingDirectory)&&$($_.CommandLine)&&popd"
+        Write-Verbose "Command: $Command"
+        <#Invoke-Command -Session $Session -ScriptBlock {
             #if (Get-PSDrive -Name M) { Remove-PSDrive -Name M }
             Write-Host "$env:COMPUTERNAME"
             Write-Verbose "$env:COMPUTERNAME"
@@ -316,6 +318,12 @@ function Invoke-InstallSoftware {
             $env:SEE_MASK_NOZONECHECKS = 1
             Set-Location "M:\"
             & "$($using:App.CommandLine)"
+        }#>
+        <#Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+            commandline="pushd $($_.WorkingDirectory); msg techuser 'Im at `pwd'; popd"
+        }#>
+        Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+            commandline="cmd $Command /e:on"
         }
         Write-Verbose "Finished Invoking command."
     }
@@ -328,13 +336,13 @@ function Invoke-InstallSoftware {
     }
 #>
     #Write-Verbose "Planning to execute Task Sequence $TaskSequenceID on $ComputerName."
-    Remove-PSSession -Session $Session
+    #Remove-PSSession -Session $Session
 
     try {
-        $DoneLabel.Text = "Launched $TaskSequenceID on $ComputerName" #rebooted to continue $TaskSequenceID" 
+        $DoneLabel.Text = "Launched $ApplicationID on $ComputerName" #rebooted to continue $TaskSequenceID" 
         $DoneLabel.Forecolor = Get-SuccessColor
         $DoneLabel.Visible = $true 
-    } catch { Write-Host "Finished Installing $TaskSequenceName" }
+    } catch { Write-Host "Finished Installing $ApplicationName" }
     
     try {
         $DoneLabel.Visible = $true
