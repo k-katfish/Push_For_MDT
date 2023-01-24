@@ -185,6 +185,8 @@ function Get-ApplicationData {
             CommandLine = the command line used to install the application
             WorkingDirectory = the full path to a network share or other directory where the application installer is located
         }
+        Note: This function will automatically find any apps marked as dependencies and then prepend those to the list of returned apps.
+        Ex: you request data for My-App, but in MDT My-App also lists 
     .NOTES
         Version:          1.0
         Authors:          Kyle Ketchell
@@ -206,12 +208,31 @@ function Get-ApplicationData {
 
     ForEach ($N in $Name) {
         $App = $script:ControlApplicationsXML.applications.application | Where-Object {$_.Name -eq $N}
+        if ($App.Dependency) {
+            Write-Verbose "Found application with Dependencies:"
+            ForEach ($dguid in $App.Dependency) {
+                $DependApp = $script:ControlApplicationsXML.applications.application | Where-Object {$_.guid -eq $dguid}
+                #Write-Verbose "Adding $($DependApp.Name) to be returned"
+                #$ApplicationData.Add([PSCustomObject]@{
+                #    Name = $DependApp.Name
+                #    guid = $DependApp.guid
+                #    CommandLine = $DependApp.CommandLine
+                #    WorkingDirectory = $DependApp.WorkingDirectory
+                #})
+                $DependAppData = Get-ApplicationData -Name $DependApp.Name
+                if ($DependAppData.Count -gt 1) {
+                    $ApplicationData.AddRange($DependAppData) *> $null
+                } else {
+                    $ApplicationData.Add($DependAppData) *> $null
+                }
+            }
+        }
         $ApplicationData.Add([PSCustomObject]@{
             Name = $App.Name
             guid = $App.guid
             CommandLine = $App.CommandLine
             WorkingDirectory = $App.WorkingDirectory
-        })
+        }) *> $null
     }
 
     $ApplicationData | ForEach-Object {
@@ -219,6 +240,8 @@ function Get-ApplicationData {
             $_.WorkingDirectory = "$(Get-DeploymentShareLocation)\$($_.WorkingDirectory.Substring(2))"
         }
     }
+
+    return $ApplicationData
 }
 
 

@@ -33,7 +33,7 @@ if ($help) {
 
 if (Get-Module ADIntegrationManager) { Remove-Module ADIntegrationManager }
 if (Get-Module ConfigManager) { Remove-Module ConfigManager }
-if (Get-Module Install_Software) { Remove-Module Install_Software }
+#if (Get-Module Install_Software) { Remove-Module Install_Software }
 if (Get-Module InstallSoftware) { Remove-Module InstallSoftware }
 if (Get-Module GUIManager) { Remove-Module GUIManager }
 if (Get-Module ToolStripManager) { Remove-Module ToolStripManager }
@@ -42,7 +42,7 @@ if (Get-Module MDTManager) { Remove-Module MDTManager }
 
 Import-Module $PSScriptRoot\ADIntegrationManager.psm1
 Import-Module $PSScriptRoot\ConfigManager.psm1
-Import-Module $PSScriptRoot\Install_Software.psm1
+#Import-Module $PSScriptRoot\Install_Software.psm1
 Import-Module $PSScriptRoot\InstallSoftware.psm1
 Import-Module $PSScriptRoot\GUIManager.psm1
 Import-Module $PSScriptRoot\ToolStripManager.psm1
@@ -83,7 +83,7 @@ $OKIcon.Visible = $false
 $OfflineIcon = New-PictureBox -Location (881, 75) -Image "$PSScriptRoot\..\Media\offline.jpg"
 $OfflineIcon.Visible = $false
 
-$ApplyToManualEntry   = New-Button -Text "Install Now" -Location (625,100) -Size (256,25)
+$ApplyToManualEntry   = New-Button -Text "Install Selected Apps" -Location (625,100) -Size (256,25)
 $StartRD              = New-Button -Text "Remote Desktop" -Location (625,125) -Size (256,25)
 $ScanComputer         = New-Button -Text "Scan Computer" -Location (625,150) -Size (256,25)
 
@@ -97,6 +97,7 @@ $ShowHiddenCheckbox   = New-Checkbox -Text "Show Hidden" -Location (500,265) -Si
 
 $OutputBox            = New-TextBox -Size (345, 90) -Location (275,300)
 $DoneLabel            = New-Label -Text "Done" -Location (($OutputBox.Location.X + 2), ($OutputBox.Location.Y + $OutputBox.Height + 130))
+$DoneLabel.BringToFront()
 
 $GUIForm.Controls.AddRange(@(
   $SelectGroupLabel, $SelectGroup,
@@ -197,10 +198,14 @@ $InstallOnSelMachines.Add_Click({
   if ($CredentialObject -eq -1) {
     return
   }
-  $ListSelectedMachines = $MachineList.SelectedItems
-  $ListSelectedSoftware = $TaskSequencesList.SelectedItems
-  Write-Verbose "Installing $ListSelectedSoftware on $ListSelectedMachines"
-  Invoke-Install -Machines $ListSelectedMachines -Installers $ListSelectedSoftware -Credential $CredentialObject -Config $Config
+
+  if ($ApplyToManualEntry.Text -eq "Install Selected Apps") {
+    Write-Verbose "Calling Invoke-InstallSoftware for Applications: $($TaskSequencesList.SelectedItems) on computers: $($MachineList.SelectedItems)"
+    Invoke-InstallSoftware -ComputerName $MachineList.SelectedItems -ApplicationName $TaskSequencesList.SelectedItems -Credential $CredentialObject
+  } elseif ($ApplyToManualEntry.Text -eq "Run Task Sequence") {
+    Write-Verbose "Planning to launch TS: $($TaskSequencesList.SelectedItem) on $($MachineList.SelectedItems)"
+    Invoke-RunTaskSequence -ComputerName $MachineList.SelectedItems -TaskSequence $TaskSequencesList.SelectedItem -Credential $CredentialObject
+  }
 })
 
 $ManualNameTextBox.Add_KeyDown({
@@ -267,6 +272,24 @@ $ManualNameTextBox.Add_TextChanged({
     $OfflineIcon.Visible = $false
     $LoadingIcon.Visible = $true
   }
+
+  if ($ManualNameTextBox.Text.Contains(' ')) {
+    $ManualNameTextBox.Text = ($ManualNameTextBox.Text.Replace(' ', ''))
+    if ($ManualNameTextBox.Text.Length -ge 4) {
+      $OKIcon.Visible = $false
+      $OfflineIcon.Visible = $false
+      $LoadingIcon.Visible = $true
+      if (Test-Connection $ManualNameTextBox.Text -Quiet -Count 1) {
+        $OKIcon.Visible = $true
+        $OfflineIcon.Visible = $false
+        $LoadingIcon.Visible = $false
+      } else {
+        $OKIcon.Visible = $false
+        $OfflineIcon.Visible = $true
+        $LoadingIcon.Visible = $false
+      }
+    }
+  }
 })
 
 $ApplyToManualEntry.Add_Click({
@@ -274,16 +297,13 @@ $ApplyToManualEntry.Add_Click({
   if ($CredentialObject -eq -1) {
     return
   }
-  #$SelectedComputer = $ManualNameTextBox.text
-  #$SelectedSoftware = $TaskSequencesList.SelectedItems
-  #Write-Verbose "Installing $SelectedSoftware on $SelectedComputer"
-  #Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
 
   if ($ApplyToManualEntry.Text -eq "Install Selected Apps") {
-    Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
+    Write-Verbose "Calling Invoke-InstallSoftware for Applications: $($TaskSequencesList.SelectedItems) on computer: $($ManualNameTextBox.Text)"
+    Invoke-InstallSoftware -ComputerName $ManualNameTextBox.Text -ApplicationName $TaskSequencesList.SelectedItems -Credential $CredentialObject
   } elseif ($ApplyToManualEntry.Text -eq "Run Task Sequence") {
     Write-Verbose "Planning to launch TS: $($TaskSequencesList.SelectedItem) on $($ManualNameTextBox.Text)"
-    Invoke-StartTaskSequence -ComputerName $ManualNameTextBox.Text -TaskSequence $TaskSequencesList.SelectedItem -Credential $CredentialObject
+    Invoke-RunTaskSequence -ComputerName $ManualNameTextBox.Text -TaskSequence $TaskSequencesList.SelectedItem -Credential $CredentialObject
   }
 })
 

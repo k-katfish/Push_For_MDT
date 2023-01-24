@@ -35,6 +35,7 @@ function Invoke-TSManageComputer ($ManageComponent) {
     $InputForm = New-WinForm -Text "$ManageComponent" -Size (250, 125)
     $HostnameLabel = New-Label -Text "Enter Computer name:" -Location (10, 20)
     $InputBox = New-TextBox -Location (10, 50) -Size (200, 23)
+    $InputBox.Text = $ManualNameTextBox.Text
     $OKButton = New-Button -Text "GO" -Location (10, 80) -Size (50, 23)
     $OKButton.Add_Click({
       $TSManageComputerName = $InputBox.Text
