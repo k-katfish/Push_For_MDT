@@ -293,10 +293,6 @@ $ApplyToManualEntry.Add_Click({
   if ($CredentialObject -eq -1) {
     return
   }
-  #$SelectedComputer = $ManualNameTextBox.text
-  #$SelectedSoftware = $TaskSequencesList.SelectedItems
-  #Write-Verbose "Installing $SelectedSoftware on $SelectedComputer"
-  #Invoke-Install -Machines $SelectedComputer -Installers $SelectedSoftware -Config $Config -Credential $CredentialObject
 
   if ($ApplyToManualEntry.Text -eq "Install Selected Apps") {
     Write-Verbose "Calling Invoke-InstallSoftware for Applications: $($TaskSequencesList.SelectedItems) on computer: $($ManualNameTextBox.Text)"
