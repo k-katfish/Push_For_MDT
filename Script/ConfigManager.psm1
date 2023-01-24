@@ -53,45 +53,46 @@ function Set-CachedMDTShareLocation ($ShareLocation) {
   Write-Verbose "Cached MDT Share Location: $(Get-CachedMDTShareLocation)"
 }
 
-function Get-BackgroundColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.BackColor
+function Get-BackgroundColor { return $script:Config.Configuration.$script:SelectedColorScheme.BackColor }
+function Get-ForegroundColor { return $script:Config.Configuration.$script:SelectedColorScheme.ForeColor }
+function Get-ToolStripBackgroundColor { return $script:Config.Configuration.$script:SelectedColorScheme.ToolStripB }
+function Get-ToolStripHoverColor { return $script:Config.Configuration.$script:SelectedColorScheme.ToolStripH }
+function Get-SuccessColor { return $script:Config.Configuration.$script:SelectedColorScheme.Success }
+function Get-WarningColor { return $script:Config.Configuration.$script:SelectedColorScheme.Warning }
+function Get-ErrorColor { return $script:Config.Configuration.$script:SelectedColorScheme.Error }
+
+function Get-FlatStyle { return $script:Config.Configuration.$script:SelectedDesignScheme.FlatStyle }
+function Get-BorderStyle { return $script:Config.Configuration.$script:SelectedDesignScheme.BorderStyle }
+function Get-FontSettings { return New-Object System.Drawing.Font($script:Config.Configuration.$script:SelectedDesignScheme.FontName, $script:Config.Configuration.$script:SelectedDesignScheme.FontSize) }
+function Get-FontSize { return $script:Config.Configuration.$script:SelectedDesignScheme.FontSize }
+function Get-FontName { return $script:Config.Configuration.$script:SelectedDesignScheme.FontName }
+function Set-ColorSchemeSettings {
+  param($B, $F, $TSB, $TSF, $S, $W, $E )
+  $C = $script:SelectedColorScheme
+  $script:Config.Configuration.$C.BackColor = $B
+  $script:Config.Configuration.$C.ForeColor = $F
+  $script:Config.Configuration.$C.ToolStripB = $TSB
+  $script:Config.Configuration.$C.ToolStripH = $TSF
+  $script:Config.Configuration.$C.Success = $S
+  $script:Config.Configuration.$C.Warning = $W
+  $script:Config.Configuration.$C.Error = $E
+  $script:Config.Save("$env:APPDATA\Push\config.xml") 
 }
 
-function Get-ForegroundColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.ForeColor
+function Set-DesignSchemeSettings {
+  param($FS, $BS, $FName, $FSize)
+  $D = $script:SelectedDesignScheme
+  $script:Config.Configuration.$D.FlatStyle = $FS
+  $script:Config.Configuration.$D.BorderStyle = $BS
+  $script:Config.Configuration.$D.FontName = $FName
+  $script:Config.Configuration.$D.FontSize = $FSize
+  $script:Config.Save("$env:APPDATA\Push\config.xml") 
 }
 
-function Get-ToolStripBackgroundColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.ToolStripB
-}
-
-function Get-ToolStripHoverColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.ToolStripH
-}
-
-function Get-SuccessColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.Success
-}
-
-function Get-WarningColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.Warning
-}
-
-function Get-ErrorColor {
-  return $script:Config.Configuration.$script:SelectedColorScheme.Error
-}
-
-function Get-FlatStyle {
-  return $script:Config.Configuration.$script:SelectedDesignScheme.FlatStyle
-}
-
-function Get-BorderStyle {
-  return $script:Config.Configuration.$script:SelectedDesignScheme.BorderStyle
-}
-
-function Get-FontSettings {
-  return New-Object System.Drawing.Font($script:Config.Configuration.$script:SelectedDesignScheme.FontName, $script:Config.Configuration.$script:SelectedDesignScheme.FontSize)
-}
+function Get-AvailableColorSchemes { return $script:Config.Configuration.AvailableColorSchemes.Schemes.Split(",") }
+function Get-AvailableDesignSchemes { return $script:Config.Configuration.AvailableDesignSchemes.Schemes.Split(",") }
+function Get-SelectedColorScheme { return $script:SelectedColorScheme }
+function Get-SelectedDesignScheme { return $script:SelectedDesignScheme }
 
 function Set-ColorScheme ($SchemeName) {
   Write-Verbose "New ColorScheme Requested: $SchemeName"
@@ -106,7 +107,7 @@ function Set-ColorScheme ($SchemeName) {
 
 function Invoke-NextColorScheme {
   Write-Verbose "Next Color Scheme requested."
-  $AvailableSchemes = $script:Config.Configuration.AvailableColorSchemes.Schemes.Split(",")
+  $AvailableSchemes = Get-AvailableColorSchemes
   $CurrentCS = $AvailableSchemes.IndexOf($script:SelectedColorScheme)
   if ($CurrentCS -eq -1) { $CurrentCS = 0}
   $NextScheme = ""
@@ -133,7 +134,7 @@ function Set-DesignScheme ($SchemeName) {
 
 function Invoke-NextDesignScheme {
   Write-Verbose "Next Design Scheme requested."
-  $AvailableSchemes = $script:Config.Configuration.AvailableDesignSchemes.Schemes.Split(",")
+  $AvailableSchemes = Get-AvailableDesignSchemes
   $CurrentDS = $AvailableSchemes.IndexOf($script:SelectedDesignScheme)
   if ($CurrentDS -eq -1) { $CurrentDS = 0}
   $NextScheme = ""

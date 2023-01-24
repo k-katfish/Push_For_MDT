@@ -2,6 +2,22 @@ $script:ControlApplicationsXML = ""
 $script:ControlTaskSequencesXML = ""
 $script:MDTShareLocation = ""
 
+function Test-DeploymentShare ([String]$Path) {
+    try {
+        Write-Verbose "Looking for Applications.xml file in Control folder at $Path"
+        if (Test-Path "$Path\Control\Applications.xml") {
+            Write-Verbose "Found Applications file: $Path\Control\Applications.xml"
+#            Set-DeploymentShareLocation $Path
+#            Set-MDTControlData
+            return $true
+            #New-ToastNotification -Title "Success" -Content "Successfully connected to the deployment share at $ProspectiveMDTShareLocation. You can change this at any time by going to File -> Connect to Deployment Share." -TitleIcon 'Information'
+            #$ConnectShareDialog.Close()
+        } else {
+            return $false
+        }
+    } catch { }
+}
+
 function Connect-DeploymentShare {
     if (-Not (Get-Module GUIManager)) { Import-Module $PSScriptRoot\GUIManager.psm1 }
     
@@ -27,19 +43,16 @@ function Connect-DeploymentShare {
                 Write-Verbose "Using MDT Share Location $ProspectiveMDTShareLocation"
             }
             
-            Write-Verbose "Looking for Applications.xml file in Control folder at $ProspectiveMDTShareLocation"
-            if (Test-Path "$($ProspectiveMDTShareLocation)\Control\Applications.xml") {
-                Write-Verbose "Found Applications file: $($ProspectiveMDTShareLocation)\Control\Applications.xml"
+            Write-Verbose "Testing $ProspectiveMDTShareLocation"
+            if (Test-DeploymentShare $ProspectiveMDTShareLocation) {
                 Set-DeploymentShareLocation $ProspectiveMDTShareLocation
                 Set-MDTControlData
-                #New-ToastNotification -Title "Success" -Content "Successfully connected to the deployment share at $ProspectiveMDTShareLocation. You can change this at any time by going to File -> Connect to Deployment Share." -TitleIcon 'Information'
                 $ConnectShareDialog.Close()
             } else {
                 New-MessageBox -Text "Unable to connect. Please verify that this is a valid MDT share." -Caption "Error" -Icon 'Error'
             }
         } catch {
             New-MessageBox -Text "Unable to connect to deployment share: $($PathTextBox.Text). Please verify that this share exists or is a valid MDT deployment share"
-            #New-ToastNotification -Title "Error" -Content "Unable to connect to deployment share at $($PathTextBox.Text). Please verify that this share exists and is a vaild MDT share."
         }
     })
 

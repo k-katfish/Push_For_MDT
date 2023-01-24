@@ -31,7 +31,23 @@ param(
     [Parameter()][String]$OutputFile
 )
 
-if (-Not ($SearchBase)) { Write-Error "Please provide an Active Directory Search Base string using the -SearchBase parameter."; exit }
+if (-Not ($SearchBase)) { 
+  Import-Module $PSScriptRoot\GUIManager.psm1
+  $SelectOUForm = New-WinForm -Text "Scan OU/Domain" -Size (400, 400) -Icon "$PSScriptRoot\..\Media\scan_host_icon.ico"
+  $OUDropdown   = New-ComboBox -Text "Select OU/Domain..." -Location (16,25) -Size (300, 25)
+  $OFLabel      = New-Label -Text "Output File Location: " -Location (16, 50)
+  $OutFileBox   = New-TextBox -Location (150, 50) -Size (300, 25)
+  $OutFileBox.Text = "$env:USERPROFILE\Desktop\ScanResults.csv"
+  $ScanButton   = New-Button -Location (16, 75) -Size (100, 25)
+  $ScanButton.Add_Click({
+    $SearchBase = Get-OUFromDNString $OUDropdown.SelectedItem
+    $OutputFile = $OutFileBox.Text
+    Start-Process Powershell -ArgumentList "powershell /c $PSScriptRoot\ScanDomain.ps1 -SearchBase $SearchBase -OutputFile $OutputFile" <#-NoNewWindow#> -WindowStyle:Hidden;
+    exit
+  })
+  $SelectOUForm.Control.Items.AddRange(@($OUDropdown, $OFLabel, $OutFileBox, $ScanButton))
+  $SelectOU.ShowDialog()
+}
 
 if (Get-Module ScanHost) { Remove-Module ScanHost }
 Import-Module $PSScriptRoot\ScanHost.psm1

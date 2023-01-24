@@ -81,13 +81,14 @@ function New-ComboBox ($Location, $Size, $Text = "Select...") {
   return $ComboBox
 }
 
-function New-TextBox ($Location, $Size) {
+function New-TextBox ($Location, $Size, [Switch]$ReadOnly) {
   $TextBox = New-Object System.Windows.Forms.TextBox
   $TextBox.Location = New-Object System.Drawing.Point($Location[0], $Location[1])
   $TextBox.Size = New-Object System.Drawing.Size($Size[0], $Size[1])
   $TextBox.BackColor = Get-BackgroundColor
   $TextBox.ForeColor = Get-ForegroundColor
   $TextBox.Font = Get-FontSettings
+  if ($ReadOnly) {$TextBox.ReadOnly = $true}
   return $TextBox
 }
 

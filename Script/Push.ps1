@@ -379,6 +379,8 @@ $ToolStrip.ForeColor = Get-ForegroundColor
 $TSFile = New-ToolStripItem "File"
 $TSFUser = New-ToolStripItem "Launch Session Manager"
 $TSFUser.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\SessionManager.ps1" <#-NoNewWindow#> -WindowStyle:Hidden -Wait; })
+$TSFScanDomain = New-ToolStripItem "Scan Domain"
+$TSFScanDomain.Add_Click({ Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\ScanDomain.ps1" <#-NoNewWindow#> -WindowStyle:Hidden -Wait; })
 $TSFMDTShare = New-ToolStripItem "Connect to MDT Share"
 $TSFMDTShare.Add_Click({
   Connect-DeploymentShare
@@ -396,14 +398,14 @@ $TSFSetGroupsLocation.Add_Click({
 })
 $TSFCustomizePush = New-ToolStripItem "Settings / Preferences"
 $TSFCustomizePush.Add_Click({ 
-  Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\ManagePushConfiguration.ps1" -WindowStyle Hidden #| Get-Process | Wait-Process
-  #Set-TaskSequenceListItems
-  #Set-GroupsListItems
+  Start-Process Powershell -ArgumentList "powershell $PSScriptRoot\ManagePushConfiguration.ps1" -WindowStyle Hidden #-Wait #| Get-Process | Wait-Process
+#  Set-TaskSequenceListItems
+#  Set-GroupsListItems
 })
 $TSFCustomizePush.DropDownItems.AddRange(@($TSFMDTShare, $TSFManageADIntegration, $TSFSetGroupsLocation))
 $TSFExitItem = New-ToolStripItem "Exit"
 $TSFExitItem.Add_Click({ $GUIForm.Close(); exit })
-$TSFile.DropDownItems.AddRange(@($TSFUser, $TSFCustomizePush, $TSFExitItem))
+$TSFile.DropDownItems.AddRange(@($TSFUser, <#$TSFScanDomain,#> $TSFCustomizePush, $TSFExitItem))
 
 $TSComputer  = New-ToolStripItem "Remote Computer"
 $TSCScanHost  = New-ToolStripItem "Scan Host"
@@ -495,7 +497,19 @@ $GCMNextDesignScheme.Add_Click({
   RefreshToolStrip -ToolStrip $ToolStrip
 })
 
-$GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme))
+$GCMRefresh = New-Object System.Windows.Forms.ToolStripMenuItem
+$GCMRefresh.Text = "Refresh"
+$GCMRefresh.Add_Click({
+  Write-Verbose "Refreshing to CS: $(Get-SelectedColorScheme) DS: $(Get-SelectedDesignScheme)"
+  Invoke-RefreshColors $GUIForm
+  Invoke-RefreshDesign $GUIForm
+  RefreshToolStrip -ToolStrip $ToolStrip
+  Set-GroupsListItems
+  Set-TaskSequenceListItems
+})
+
+
+$GUIContextMenu.Items.AddRange(@($GCMNextColorScheme, $GCMNextDesignScheme, $GCMRefresh))
 
 $GUIForm.ContextMenuStrip = $GUIContextMenu
 
