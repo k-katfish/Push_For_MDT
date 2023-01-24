@@ -212,7 +212,7 @@ function Invoke-InstallSoftware {
       [Parameter(ParameterSetName="Default")][Alias("h")][Switch]$help,
       [Parameter(ParameterSetName="ComputersByName")][String]$ComputerName,
       [Parameter(ParameterSetName="CimSession")][CimSession]$CimSession,
-      [Parameter()][Alias("App")][String]$ApplicationName,
+      [Parameter()][Alias("App")]$ApplicationName,
       [Parameter()][PSCredential]$Credential
     )
 
