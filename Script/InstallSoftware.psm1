@@ -222,7 +222,12 @@ function Invoke-InstallSoftware {
 
     $ApplicationName | ForEach-Object {
         Write-Verbose "Getting data for $_"
-        $ApplicationData.Add((Get-ApplicationData -Name $_))
+        $AppData = Get-ApplicationData -Name $_
+        if ($AppData.Count -gt 1) {
+            Write-Verbose "App has dependencies"
+            $ApplicationData.AddRange($AppData) 
+        }
+        else { $ApplicationData.Add($AppData) }
     }
 
     $ApplicationData | ForEach-Object {
@@ -251,15 +256,16 @@ function Invoke-InstallSoftware {
     #    commandline = "powershell.exe /c Enable-PSRemoting -SkipNetworkProfileCheck -Force"
     #}
 
-    <#Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+    Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
         commandline="powershell.exe /c Enable-WSManCredSSP -Role Server -Force"
     }
 
     $ComputerName | ForEach-Object {
-        Start-Process powershell.exe -ArgumentList "EnableWSManCredSSP", "Client","$_", "-Force" -Wait
-    }#>
+        #Start-Process powershell.exe -ArgumentList "Enable-WSManCredSSP", "Client", "-DelegateComputer", "$_", "-Force" -Wait
+        Enable-WSManCredSSP -Role Client -DelegateComputer $_ -Force
+    }
 
-    #$CimSession = New-CimSession -ComputerName $ComputerName -Authentication CredSsp -Credential $Credential
+    $CimSession = New-CimSession -ComputerName $ComputerName -Authentication CredSsp -Credential $Credential
 
     <#Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
         commandline="NET USE X: $MDTShare"
@@ -303,7 +309,7 @@ function Invoke-InstallSoftware {
         Write-Verbose "Attempting to install $($_.Name) on $($Session.ComputerName) using cmd: $($_.CommandLine) and dir: $($_.WorkingDirectory) as: $($Credential.UserName)"
         $App = $_
         Write-Verbose "Appd: $($App.Name) $($App.WorkingDirectory) $($App.CommandLine)"
-        $Command = "pushd $($_.WorkingDirectory)&&$($_.CommandLine)&&popd"
+        $Command = "pushd $($_.WorkingDirectory)&&$($_.CommandLine)"#&&popd"
         Write-Verbose "Command: $Command"
         <#Invoke-Command -Session $Session -ScriptBlock {
             #if (Get-PSDrive -Name M) { Remove-PSDrive -Name M }
@@ -322,9 +328,15 @@ function Invoke-InstallSoftware {
         <#Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
             commandline="pushd $($_.WorkingDirectory); msg techuser 'Im at `pwd'; popd"
         }#>
-        Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
-            commandline="cmd $Command /e:on"
+        $ProcessData = Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+            commandline="cmd /e:on /c $Command"
         }
+
+        While (Get-CimInstance -CimSession $CimSession -ClassName CIM_Process | Where-Object {$_.ProcessID -eq $ProcessData.ProcessId}) {
+            Write-Verbose "Waiting 1s for host $($CimSession.ComputerName) to finish process $($ProcessData.ProcessID)"
+            Start-Sleep -Seconds 1
+        }
+
         Write-Verbose "Finished Invoking command."
     }
 
@@ -337,6 +349,19 @@ function Invoke-InstallSoftware {
 #>
     #Write-Verbose "Planning to execute Task Sequence $TaskSequenceID on $ComputerName."
     #Remove-PSSession -Session $Session
+
+    Invoke-CimMethod -CimSession $CimSession -ClassName Win32_Process -MethodName create -Arguments @{
+        commandline="powershell.exe /c Disable-WSManCredSSP -Role Server -Force"
+    }
+
+    #$ComputerName | ForEach-Object {
+        #Start-Process powershell.exe -ArgumentList "Enable-WSManCredSSP", "Client", "-DelegateComputer", "$_", "-Force" -Wait
+    #    Enable-WSManCredSSP -Role Client -DelegateComputer $_ -Force
+    #}
+
+    Disable-WSManCredSSP -Role Client
+
+    Remove-CimSession $CimSession
 
     try {
         $DoneLabel.Text = "Launched $ApplicationID on $ComputerName" #rebooted to continue $TaskSequenceID" 

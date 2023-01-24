@@ -97,6 +97,7 @@ $ShowHiddenCheckbox   = New-Checkbox -Text "Show Hidden" -Location (500,265) -Si
 
 $OutputBox            = New-TextBox -Size (345, 90) -Location (275,300)
 $DoneLabel            = New-Label -Text "Done" -Location (($OutputBox.Location.X + 2), ($OutputBox.Location.Y + $OutputBox.Height + 130))
+$DoneLabel.BringToFront()
 
 $GUIForm.Controls.AddRange(@(
   $SelectGroupLabel, $SelectGroup,
